@@ -555,18 +555,24 @@ export default function App() {
       if (u) {
         const userRef = doc(db, 'users', u.uid);
         const userSnap = await getDoc(userRef);
+        const userData = {
+          uid: u.uid,
+          email: u.email,
+          displayName: u.displayName,
+          lastActive: serverTimestamp()
+        };
+
         if (userSnap.exists()) {
           const data = userSnap.data();
           setUserRole(data.role);
           setUserStatus(data.status);
+          await updateDoc(userRef, { lastActive: serverTimestamp() });
         } else {
           const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
           const role = isMasterEmail ? 'master' : 'user';
           const status = isMasterEmail ? 'approved' : 'pending';
           await setDoc(userRef, {
-            uid: u.uid,
-            email: u.email,
-            displayName: u.displayName,
+            ...userData,
             role: role,
             status: status,
             createdAt: serverTimestamp()
@@ -578,6 +584,28 @@ export default function App() {
       setIsAuthReady(true);
     });
   }, []);
+
+  // Presence Heartbeat
+  useEffect(() => {
+    if (!user || userStatus !== 'approved') return;
+
+    const updatePresence = async () => {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), {
+          lastActive: serverTimestamp()
+        });
+      } catch (err) {
+        console.error("Error updating presence:", err);
+      }
+    };
+
+    // Update immediately on mount/auth
+    updatePresence();
+
+    // Then every 2 minutes
+    const interval = setInterval(updatePresence, 120000);
+    return () => clearInterval(interval);
+  }, [user, userStatus]);
 
   // Users Listener (Master only)
   useEffect(() => {
@@ -659,6 +687,16 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    if (user) {
+      try {
+        // Set lastActive to null or old date on logout to immediately show as offline
+        await updateDoc(doc(db, 'users', user.uid), {
+          lastActive: null
+        });
+      } catch (e) {
+        console.error("Error clearing presence on logout", e);
+      }
+    }
     await signOut(auth);
     setView('dashboard');
     setCurrentDraftId(null);
@@ -1710,13 +1748,29 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {allUsers.map(u => (
-                <tr key={u.uid} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-slate-900">{u.displayName}</div>
-                    <div className="text-xs text-slate-500">{u.email}</div>
-                  </td>
-                  <td className="px-6 py-4">
+              {allUsers.map(u => {
+                const isOnline = u.lastActive && (Date.now() - u.lastActive.toMillis() < 300000); // 5 minutes threshold
+                
+                return (
+                  <tr key={u.uid} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-xs">
+                            {u.displayName?.substring(0, 2).toUpperCase() || '??'}
+                          </div>
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${isOnline ? 'bg-green-500' : 'bg-slate-300'}`} title={isOnline ? 'Online agora' : 'Offline'} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900 flex items-center gap-2">
+                            {u.displayName}
+                            {isOnline && <span className="text-[8px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Ativo</span>}
+                          </div>
+                          <div className="text-xs text-slate-500">{u.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                       u.status === 'approved' ? 'bg-green-100 text-green-700' : 
                       u.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
@@ -1763,7 +1817,8 @@ export default function App() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
