@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string
+    //   - role: string (user, master) - required
+    //   - createdAt: timestamp
+    //
+    // Collection: etps
+    // Document ID: {etpId}
+    // Fields:
+    //   - id: string
+    //   - userId: string (required)
+    //   - userEmail: string
+    //   - title: string
+    //   - status: string (draft, completed, deleted, active)
+    //   - data: map (ETPData)
+    //   - createdAt: timestamp
+    //   - updatedAt: timestamp
+    //   - deletedAt: timestamp (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDefaultMaster() {
+      return isAuthenticated() && request.auth.token.email == "diego.martins@cmc.pr.gov.br";
+    }
+    
+    function isMaster() {
+      return isDefaultMaster() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master'
+      );
+    }
+    
+    function isApproved() {
+      return isDefaultMaster() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+      );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'status']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['user', 'master'] &&
+             data.status in ['pending', 'approved', 'disabled'];
+    }
+
+    function isValidETP(data) {
+      return data.keys().hasAll(['userId', 'data', 'status']) &&
+             data.userId is string &&
+             data.status in ['draft', 'completed', 'deleted', 'active'] &&
+             data.data is map;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (isOwner(uid) || isMaster());
+      // New users start as pending, except for the default master email
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && isOwner(uid) && (
+        (request.resource.data.status == 'pending' && request.resource.data.role == 'user') ||
+        isDefaultMaster()
+      );
+      // Only Master can update status or roles
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isMaster() || (isOwner(uid) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status));
+    }
+
+    match /etps/{etpId} {
+      // Allow authenticated users to read their own ETPs without requiring isApproved() check here
+      // to avoid excessive cross-collection lookups and potential permission-denied errors during listing.
+      // Security is maintained because only approved users can CREATE or UPDATE ETPs.
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
+      
+      allow create: if isApproved() && isValidETP(request.resource.data) && 
+                    request.resource.data.userId == request.auth.uid;
+      allow update: if isApproved() && isValidETP(request.resource.data) && 
+                    (resource.data.userId == request.auth.uid || isMaster());
+      allow delete: if isApproved() && (resource.data.userId == request.auth.uid || isMaster());
+    }
+  }
+}

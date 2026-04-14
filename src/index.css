@@ -1,0 +1,98 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 font-sans;
+  }
+}
+
+@layer components {
+  .textarea-clean {
+    @apply border-none resize-none w-full outline-none text-sm leading-relaxed text-slate-700 bg-transparent;
+  }
+
+  .etp-doc {
+    @apply p-8 font-serif text-black;
+  }
+
+  .etp-doc h2 {
+    @apply text-xs font-bold uppercase border-b border-black mt-4 pb-1;
+  }
+
+  .etp-doc p {
+    @apply text-sm text-justify mb-3 leading-relaxed whitespace-pre-wrap;
+  }
+
+  .tiptap-content table {
+    @apply w-full border-collapse my-4;
+  }
+
+  .tiptap-content td, .tiptap-content th {
+    @apply border border-slate-300 p-2 text-left text-sm;
+  }
+
+  .tiptap-content th {
+    @apply bg-slate-100 font-bold;
+  }
+}
+
+@layer utilities {
+  .ai-glow {
+    animation: glow 2s infinite alternate;
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 5px rgba(99, 102, 241, 0.2);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  body {
+    background: white;
+    padding: 0;
+    margin: 0;
+  }
+  .etp-doc {
+    padding: 2cm;
+    font-family: "Times New Roman", serif;
+  }
+  .etp-doc h2 {
+    font-size: 12pt;
+  }
+  .etp-doc p {
+    font-size: 11pt;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
