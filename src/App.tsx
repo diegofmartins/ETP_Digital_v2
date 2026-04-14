@@ -826,7 +826,7 @@ export default function App() {
       'diag_problema_necessidade', 'diag_alternativas_solucao', 'diag_objeto_vigencia', 'diag_exigencias_padroes',
       'diag_quantidades_valor', 'diag_parcelamento_providencias', 'diag_correlatas_ambientais', 'diag_riscos_sucesso'
     ];
-    return mandatoryFields.every(field => (formData[field]?.length || 0) > 5);
+    return mandatoryFields.every(field => (formData[field]?.length || 0) > 10);
   };
 
   const handleGlobalGenerate = async (fillEmpty: boolean = true) => {
@@ -902,250 +902,253 @@ export default function App() {
 
   const handleExportDoc = async () => {
     if (!formData) return;
-    const filteredStructure = structure
-      .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(s.id))
-      .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
-      .filter(s => s.id !== 'fotos' || (formData && formData.fotos));
+    setApiError(null);
+    try {
+      const filteredStructure = structure
+        .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(s.id))
+        .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
+        .filter(s => s.id !== 'fotos' || (formData && formData.fotos));
 
-    const doc = new Document({
-      styles: {
-        paragraphStyles: [
-          {
-            id: "Normal",
-            name: "Normal",
-            basedOn: "Normal",
-            next: "Normal",
-            quickFormat: true,
-            run: { size: 21, font: "Inter" },
-            paragraph: { spacing: { line: 360 } },
-          },
-          {
-            id: "heading1",
-            name: "Heading 1",
-            basedOn: "Normal",
-            next: "Normal",
-            quickFormat: true,
-            run: { size: 36, bold: true, color: "000000" },
-            paragraph: { alignment: AlignmentType.CENTER, border: { bottom: { style: "single", size: 12, color: "000000" } }, spacing: { after: 400 } },
-          },
-          {
-            id: "heading2",
-            name: "Heading 2",
-            basedOn: "Normal",
-            next: "Normal",
-            quickFormat: true,
-            run: { size: 24, bold: true, color: "000000" },
-            paragraph: { 
-              shading: { fill: "F0F0F0" }, 
-              border: { top: { style: "single", size: 6 }, bottom: { style: "single", size: 6 }, left: { style: "single", size: 6 }, right: { style: "single", size: 6 } },
-              spacing: { before: 400, after: 200 } 
+      const doc = new Document({
+        styles: {
+          paragraphStyles: [
+            {
+              id: "Normal",
+              name: "Normal",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              run: { size: 21, font: "Inter" },
+              paragraph: { spacing: { line: 360 } },
             },
-          },
-          {
-            id: "heading3",
-            name: "Heading 3",
-            basedOn: "Normal",
-            next: "Normal",
-            quickFormat: true,
-            run: { size: 22, bold: true, color: "000000" },
-            paragraph: { 
-              border: { bottom: { style: "single", size: 6, color: "EEEEEE" } },
-              spacing: { before: 300, after: 100 } 
+            {
+              id: "heading1",
+              name: "Heading 1",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              run: { size: 36, bold: true, color: "000000" },
+              paragraph: { alignment: AlignmentType.CENTER, border: { bottom: { style: "single", size: 12, color: "000000" } }, spacing: { after: 400 } },
             },
-          },
-        ],
-      },
-      sections: [{
-        properties: {},
-        children: [
-          new Paragraph({
-            text: "ESTUDO TÉCNICO PRELIMINAR",
-            style: "heading1",
-          }),
-          new Paragraph({
-            text: formData.etp_name || "Sem título",
-            alignment: AlignmentType.CENTER,
-            run: { size: 24, bold: true },
-            spacing: { after: 400 }
-          }),
-          new Paragraph({
-            text: "I - INFORMAÇÕES GERAIS",
-            style: "heading2",
-          }),
-          new Paragraph({
-            text: "1. IDENTIFICAÇÃO DO PROCESSO E ÁREA REQUISITANTE",
-            style: "heading3",
-          }),
-          new DocxTable({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-              new DocxTableRow({
-                children: [
-                  new DocxTableCell({ 
-                    shading: { fill: "F9F9F9" },
-                    children: [new Paragraph({ text: "Nº Processo SPAE", run: { size: 18, bold: true } })] 
-                  }),
-                  new DocxTableCell({ 
-                    shading: { fill: "F9F9F9" },
-                    children: [new Paragraph({ text: "Área Demandante", run: { size: 18, bold: true } })] 
-                  }),
-                ],
-              }),
-              new DocxTableRow({
-                children: [
-                  new DocxTableCell({ children: [new Paragraph(formData.processo_spae || "---")] }),
-                  new DocxTableCell({ children: [new Paragraph(formData.unidade_requisitante || "---")] }),
-                ],
-              }),
-            ],
-          }),
-          ...filteredStructure
-            .filter(item => item.id !== 'assinaturas')
-            .flatMap(item => {
-              const elements: any[] = [];
-              const firstInSection = filteredStructure.find(s => s.section === item.section)?.id === item.id;
-              
-              if (firstInSection && item.section && item.section !== 'I - INFORMAÇÕES GERAIS') {
-                elements.push(new Paragraph({ text: item.section, style: "heading2" }));
-              }
-
-              elements.push(new Paragraph({
-                text: item.label.toUpperCase(),
-                style: "heading3",
-              }));
-
-              let content = formData[item.id] || "---";
-              
-              if (item.id === 'requisitos_header' && (!formData[item.id] || formData[item.id] === '')) {
-                return elements;
-              }
-
-              if (item.id === 'tabela_estimativa_quantitativos_precos') {
-                const parser = new DOMParser();
-                const htmlDoc = parser.parseFromString(content, 'text/html');
-                const tableElement = htmlDoc.querySelector('table');
-                
-                if (tableElement) {
-                  const rows = Array.from(tableElement.querySelectorAll('tr'));
-                  elements.push(new DocxTable({
-                    width: { size: 100, type: WidthType.PERCENTAGE },
-                    rows: rows.map(row => new DocxTableRow({
-                      children: Array.from(row.querySelectorAll('td, th')).map(cell => new DocxTableCell({
-                        shading: cell.tagName === 'TH' ? { fill: "F5F5F5" } : undefined,
-                        children: [new Paragraph({ text: cell.textContent || "", run: { bold: cell.tagName === 'TH' } })],
-                      })),
-                    })),
-                  }));
-                  return elements;
-                }
-                content = htmlDoc.body.textContent || "";
-              }
-
-              if (item.id === 'fotos' && formData.fotos) {
-                try {
-                  const images = JSON.parse(formData.fotos);
-                  images.forEach((img: string) => {
-                    elements.push(new Paragraph({
-                      children: [
-                        new ImageRun({
-                          data: base64ToUint8Array(img),
-                          transformation: {
-                            width: 500,
-                            height: 350,
-                          },
-                        } as any),
-                      ],
-                      alignment: AlignmentType.CENTER,
-                      spacing: { before: 200, after: 200 }
-                    }));
-                  });
-                  return elements;
-                } catch (e) {
-                  return elements;
-                }
-              }
-
-              elements.push(new Paragraph({
-                text: content,
-                alignment: AlignmentType.JUSTIFIED,
-                spacing: { after: 200 }
-              }));
-
-              return elements;
+            {
+              id: "heading2",
+              name: "Heading 2",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              run: { size: 24, bold: true, color: "000000" },
+              paragraph: { 
+                shading: { fill: "F0F0F0" }, 
+                border: { top: { style: "single", size: 6 }, bottom: { style: "single", size: 6 }, left: { style: "single", size: 6 }, right: { style: "single", size: 6 } },
+                spacing: { before: 400, after: 200 } 
+              },
+            },
+            {
+              id: "heading3",
+              name: "Heading 3",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              run: { size: 22, bold: true, color: "000000" },
+              paragraph: { 
+                border: { bottom: { style: "single", size: 6, color: "EEEEEE" } },
+                spacing: { before: 300, after: 100 } 
+              },
+            },
+          ],
+        },
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: "ESTUDO TÉCNICO PRELIMINAR", bold: true })],
+              style: "heading1",
             }),
-          new Paragraph({ text: "", spacing: { before: 600 } }),
-          new DocxTable({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: (() => {
-              const signatureLines = (formData.assinaturas || "")
-                .split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0);
-
-              const rows: DocxTableRow[] = [];
-              for (let i = 0; i < signatureLines.length; i += 2) {
-                const left = signatureLines[i];
-                const right = signatureLines[i + 1];
-
-                const rowChildren = [];
-                
-                // Left signature
-                const [leftName, leftDept] = left.split(',').map(s => s.trim());
-                rowChildren.push(new DocxTableCell({
-                  borders: { top: { style: "single", size: 6 } },
+            new Paragraph({
+              children: [new TextRun({ text: formData.etp_name || "Sem título", size: 24, bold: true })],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 400 }
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: "I - INFORMAÇÕES GERAIS", bold: true })],
+              style: "heading2",
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: "1. IDENTIFICAÇÃO DO PROCESSO E ÁREA REQUISITANTE", bold: true })],
+              style: "heading3",
+            }),
+            new DocxTable({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                new DocxTableRow({
                   children: [
-                    new Paragraph({
-                      text: (leftName || "").toUpperCase(),
-                      alignment: AlignmentType.CENTER,
-                      run: { size: 18, bold: true }
+                    new DocxTableCell({ 
+                      shading: { fill: "F9F9F9" },
+                      children: [new Paragraph({ children: [new TextRun({ text: "Nº Processo SPAE", size: 18, bold: true })] })] 
                     }),
-                    new Paragraph({
-                      text: leftDept || "",
-                      alignment: AlignmentType.CENTER,
-                      run: { size: 16 }
-                    })
-                  ]
+                    new DocxTableCell({ 
+                      shading: { fill: "F9F9F9" },
+                      children: [new Paragraph({ children: [new TextRun({ text: "Área Demandante", size: 18, bold: true })] })] 
+                    }),
+                  ],
+                }),
+                new DocxTableRow({
+                  children: [
+                    new DocxTableCell({ children: [new Paragraph({ children: [new TextRun(formData.processo_spae || "---")] })] }),
+                    new DocxTableCell({ children: [new Paragraph({ children: [new TextRun(formData.unidade_requisitante || "---")] })] }),
+                  ],
+                }),
+              ],
+            }),
+            ...filteredStructure
+              .filter(item => item.id !== 'assinaturas')
+              .flatMap(item => {
+                const elements: any[] = [];
+                const firstInSection = filteredStructure.find(s => s.section === item.section)?.id === item.id;
+                
+                if (firstInSection && item.section && item.section !== 'I - INFORMAÇÕES GERAIS') {
+                  elements.push(new Paragraph({ children: [new TextRun({ text: item.section, bold: true })], style: "heading2" }));
+                }
+
+                elements.push(new Paragraph({
+                  children: [new TextRun({ text: item.label.toUpperCase(), bold: true })],
+                  style: "heading3",
                 }));
 
-                // Right signature (if exists)
-                if (right) {
-                  const [rightName, rightDept] = right.split(',').map(s => s.trim());
+                let content = formData[item.id] || "---";
+                
+                if (item.id === 'requisitos_header' && (!formData[item.id] || formData[item.id] === '')) {
+                  return elements;
+                }
+
+                if (item.id === 'tabela_estimativa_quantitativos_precos') {
+                  const parser = new DOMParser();
+                  const htmlDoc = parser.parseFromString(content, 'text/html');
+                  const tableElement = htmlDoc.querySelector('table');
+                  
+                  if (tableElement) {
+                    const rows = Array.from(tableElement.querySelectorAll('tr'));
+                    elements.push(new DocxTable({
+                      width: { size: 100, type: WidthType.PERCENTAGE },
+                      rows: rows.map(row => new DocxTableRow({
+                        children: Array.from(row.querySelectorAll('td, th')).map(cell => new DocxTableCell({
+                          shading: cell.tagName === 'TH' ? { fill: "F5F5F5" } : undefined,
+                          children: [new Paragraph({ children: [new TextRun({ text: cell.textContent || "", bold: cell.tagName === 'TH' })] })],
+                        })),
+                      })),
+                    }));
+                    return elements;
+                  }
+                  content = htmlDoc.body.textContent || "";
+                }
+
+                if (item.id === 'fotos' && formData.fotos) {
+                  try {
+                    const images = JSON.parse(formData.fotos);
+                    images.forEach((img: string) => {
+                      if (img && img.includes('base64')) {
+                        elements.push(new Paragraph({
+                          children: [
+                            new ImageRun({
+                              data: base64ToUint8Array(img),
+                              transformation: {
+                                width: 500,
+                                height: 350,
+                              },
+                            } as any),
+                          ],
+                          alignment: AlignmentType.CENTER,
+                          spacing: { before: 200, after: 200 }
+                        }));
+                      }
+                    });
+                    return elements;
+                  } catch (e) {
+                    return elements;
+                  }
+                }
+
+                elements.push(new Paragraph({
+                  children: [new TextRun(content)],
+                  alignment: AlignmentType.JUSTIFIED,
+                  spacing: { after: 200 }
+                }));
+
+                return elements;
+              }),
+            new Paragraph({ children: [new TextRun("")], spacing: { before: 600 } }),
+            new DocxTable({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: (() => {
+                const signatureLines = (formData.assinaturas || "")
+                  .split('\n')
+                  .map(line => line.trim())
+                  .filter(line => line.length > 0);
+
+                const rows: DocxTableRow[] = [];
+                for (let i = 0; i < signatureLines.length; i += 2) {
+                  const left = signatureLines[i];
+                  const right = signatureLines[i + 1];
+
+                  const rowChildren = [];
+                  
+                  // Left signature
+                  const [leftName, leftDept] = left.split(',').map(s => s.trim());
                   rowChildren.push(new DocxTableCell({
                     borders: { top: { style: "single", size: 6 } },
                     children: [
                       new Paragraph({
-                        text: (rightName || "").toUpperCase(),
+                        children: [new TextRun({ text: (leftName || "").toUpperCase(), size: 18, bold: true })],
                         alignment: AlignmentType.CENTER,
-                        run: { size: 18, bold: true }
                       }),
                       new Paragraph({
-                        text: rightDept || "",
+                        children: [new TextRun({ text: leftDept || "", size: 16 })],
                         alignment: AlignmentType.CENTER,
-                        run: { size: 16 }
                       })
                     ]
                   }));
-                } else {
-                  rowChildren.push(new DocxTableCell({ borders: { top: { style: "none" } }, children: [] }));
+
+                  // Right signature (if exists)
+                  if (right) {
+                    const [rightName, rightDept] = right.split(',').map(s => s.trim());
+                    rowChildren.push(new DocxTableCell({
+                      borders: { top: { style: "single", size: 6 } },
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: (rightName || "").toUpperCase(), size: 18, bold: true })],
+                          alignment: AlignmentType.CENTER,
+                        }),
+                        new Paragraph({
+                          children: [new TextRun({ text: rightDept || "", size: 16 })],
+                          alignment: AlignmentType.CENTER,
+                        })
+                      ]
+                    }));
+                  } else {
+                    rowChildren.push(new DocxTableCell({ borders: { top: { style: "none" } }, children: [] }));
+                  }
+
+                  rows.push(new DocxTableRow({ children: rowChildren }));
+                  rows.push(new DocxTableRow({ children: [new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] }), new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] })] }));
                 }
+                return rows;
+              })(),
+            }),
+            new Paragraph({
+              children: [new TextRun(`Curitiba, ____ de ____________ de 202_.`)],
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 600 }
+            }),
+          ],
+        }],
+      });
 
-                rows.push(new DocxTableRow({ children: rowChildren }));
-                rows.push(new DocxTableRow({ children: [new DocxTableCell({ children: [new Paragraph("")] }), new DocxTableCell({ children: [new Paragraph("")] })] }));
-              }
-              return rows;
-            })(),
-          }),
-          new Paragraph({
-            text: `Curitiba, ____ de ____________ de 202_.`,
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 600 }
-          }),
-        ],
-      }],
-    });
-
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `ETP_${formData.etp_name || 'Digital'}.docx`);
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `ETP_${formData.etp_name || 'Digital'}.docx`);
+    } catch (err: any) {
+      console.error("Erro ao exportar DOCX:", err);
+      setApiError("Erro ao exportar DOCX. Verifique se os dados estão corretos.");
+    }
   };
 
   const handlePrint = () => {
