@@ -716,6 +716,9 @@ export default function App() {
 
   const deleteDraft = async (id: string) => {
     try {
+      // Optimistic update
+      setDrafts(prev => prev.filter(d => d.id !== id));
+      
       await updateDoc(doc(db, 'etps', id), { 
         status: 'deleted',
         deletedAt: serverTimestamp()
@@ -823,7 +826,7 @@ export default function App() {
       'diag_problema_necessidade', 'diag_alternativas_solucao', 'diag_objeto_vigencia', 'diag_exigencias_padroes',
       'diag_quantidades_valor', 'diag_parcelamento_providencias', 'diag_correlatas_ambientais', 'diag_riscos_sucesso'
     ];
-    return mandatoryFields.every(field => (formData[field]?.length || 0) > 10);
+    return mandatoryFields.every(field => (formData[field]?.length || 0) > 5);
   };
 
   const handleGlobalGenerate = async (fillEmpty: boolean = true) => {
@@ -1875,6 +1878,14 @@ export default function App() {
                   </span>
                 </div>
                 <button 
+                  onClick={() => saveDraft(true)}
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+                >
+                  <Icon name="CheckCircle" size={14} className={isSaving ? "animate-pulse text-orange-400" : "text-green-500"} />
+                  Salvar
+                </button>
+                <button 
                   onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}
                   className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-2"
                 >
@@ -1919,22 +1930,32 @@ export default function App() {
                     </nav>
                   </div>
                   
-                  {isMandatoryFilled() && (
-                    <button 
-                      onClick={() => setShowGlobalConfirm(true)}
-                      className="w-full bg-indigo-600 text-white p-6 rounded-[32px] font-black uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-200 flex flex-col items-center gap-3 group"
-                    >
-                      <div className="bg-white/20 p-3 rounded-2xl group-hover:scale-110 transition-transform">
-                        <Icon name="Sparkles" size={24} />
-                      </div>
-                      Gerar ETP Completo
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => setShowGlobalConfirm(true)}
+                    disabled={!isMandatoryFilled() || !!isGenerating}
+                    className={`w-full p-6 rounded-[32px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl flex flex-col items-center gap-3 group ${isMandatoryFilled() ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                  >
+                    <div className={`p-3 rounded-2xl transition-transform ${isMandatoryFilled() ? 'bg-white/20 group-hover:scale-110' : 'bg-slate-300'}`}>
+                      <Icon name="Sparkles" size={24} />
+                    </div>
+                    Gerar ETP Completo
+                    {!isMandatoryFilled() && <span className="text-[8px] opacity-60 normal-case font-medium">Preencha o diagnóstico para liberar</span>}
+                  </button>
                 </aside>
 
                 <div className="flex-1 space-y-6">
                   {/* ETP NAME FIELD */}
-                  <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                  <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                        <Icon name="Wand2" size={24} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Comece por aqui</h2>
+                        <p className="text-slate-500 text-sm">Dê um nome ao seu projeto e responda ao diagnóstico inicial para liberar a IA.</p>
+                      </div>
+                    </div>
+                    
                     <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
                       <Icon name="Edit3" size={14} />
                       Nome do ETP (Identificação Interna)
@@ -2056,8 +2077,8 @@ export default function App() {
                         <div className="flex justify-center py-8">
                           <button 
                             onClick={() => setShowGlobalConfirm(true)}
-                            disabled={!!isGenerating}
-                            className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center gap-3"
+                            disabled={!isMandatoryFilled() || !!isGenerating}
+                            className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl flex items-center gap-3 ${isMandatoryFilled() ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
                           >
                             {isGenerating === 'global' ? <Loader2 size={20} className="animate-spin" /> : <Icon name="Sparkles" size={20} />}
                             Gerar Estudo Técnico Completo
