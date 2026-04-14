@@ -1994,76 +1994,95 @@ export default function App() {
                   </div>
 
                   {/* TECHNICAL FIELDS */}
-                  <div className="pt-12 space-y-6">
-                    <div className="flex items-center gap-3 px-2">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-lg">
-                        <Icon name="Settings2" size={20} />
+                  {(isMandatoryFilled() || showAdvanced) ? (
+                    <div className="pt-12 space-y-6">
+                      <div className="flex items-center gap-3 px-2">
+                        <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-lg">
+                          <Icon name="Settings2" size={20} />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-black text-slate-900 tracking-tight">Campos Obrigatórios</h2>
+                          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Detalhamento Técnico do Objeto</p>
+                        </div>
                       </div>
-                      <div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Detalhamento Técnico</h2>
-                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Campos Obrigatórios</p>
+
+                      {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(item.id)).map(item => (
+                        <div key={item.id} id={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md">
+                          <div className="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-indigo-600">
+                                <Icon name={item.icon} size={16} />
+                              </div>
+                              <div>
+                                <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">{item.label}</h3>
+                                {item.instruction && <p className="text-[9px] text-slate-400 font-medium uppercase mt-0.5">{item.instruction}</p>}
+                              </div>
+                            </div>
+                            {item.isAiEnabled !== false && (
+                              <button 
+                                onClick={() => handleAiAssist(item.id)} 
+                                disabled={isGenerating !== null} 
+                                className="text-[9px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-50 flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                              >
+                                {isGenerating === item.id ? <Loader2 size={10} className="animate-spin" /> : <Icon name="Sparkles" size={10} />}
+                                Refinar com IA
+                              </button>
+                            )}
+                          </div>
+                          <div className="p-6">
+                            {item.id === 'tabela_estimativa_quantitativos_precos' ? (
+                              <TiptapEditor 
+                                content={(formData && formData[item.id]) || ''} 
+                                onChange={(content) => setFormData(prev => ({...prev, [item.id]: content}))} 
+                              />
+                            ) : item.id === 'fotos' ? (
+                              <FileUploader 
+                                value={(formData && formData[item.id]) || ''} 
+                                onChange={(value) => setFormData(prev => ({...prev, [item.id]: value}))} 
+                              />
+                            ) : (
+                              <textarea 
+                                value={(formData && formData[item.id]) || ''} 
+                                onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
+                                className="textarea-clean min-h-[120px] text-sm resize-y focus:min-h-[250px] transition-all duration-300" 
+                                placeholder={item.placeholder || "Preencha aqui..."}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {!showAdvanced && (
+                        <div className="flex justify-center py-8">
+                          <button 
+                            onClick={() => setShowGlobalConfirm(true)}
+                            disabled={!!isGenerating}
+                            className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center gap-3"
+                          >
+                            {isGenerating === 'global' ? <Loader2 size={20} className="animate-spin" /> : <Icon name="Sparkles" size={20} />}
+                            Gerar Estudo Técnico Completo
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="pt-12">
+                      <div className="bg-slate-100 rounded-[32px] p-12 text-center border-2 border-dashed border-slate-200">
+                        <div className="bg-white w-16 h-16 rounded-2xl flex items-center justify-center text-indigo-600 mx-auto mb-6 shadow-sm">
+                          <Icon name="ShieldCheck" size={32} />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">Seções Bloqueadas</h3>
+                        <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
+                          Para liberar o detalhamento técnico e as ferramentas de IA, você precisa preencher detalhadamente todos os campos do <strong>Diagnóstico Inicial</strong> acima.
+                        </p>
+                        <div className="mt-8 flex justify-center gap-2">
+                          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                            <div key={i} className={`w-2 h-2 rounded-full ${formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData]?.length > 10 ? 'bg-green-500' : 'bg-slate-300'}`} />
+                          ))}
+                        </div>
                       </div>
                     </div>
-
-                    {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(item.id)).map(item => (
-                      <div key={item.id} id={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md">
-                        <div className="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-indigo-600">
-                              <Icon name={item.icon} size={16} />
-                            </div>
-                            <div>
-                              <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">{item.label}</h3>
-                              {item.instruction && <p className="text-[9px] text-slate-400 font-medium uppercase mt-0.5">{item.instruction}</p>}
-                            </div>
-                          </div>
-                          {item.isAiEnabled !== false && (
-                            <button 
-                              onClick={() => handleAiAssist(item.id)} 
-                              disabled={isGenerating !== null} 
-                              className="text-[9px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-50 flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
-                            >
-                              {isGenerating === item.id ? <Loader2 size={10} className="animate-spin" /> : <Icon name="Sparkles" size={10} />}
-                              Refinar com IA
-                            </button>
-                          )}
-                        </div>
-                        <div className="p-6">
-                          {item.id === 'tabela_estimativa_quantitativos_precos' ? (
-                            <TiptapEditor 
-                              content={(formData && formData[item.id]) || ''} 
-                              onChange={(content) => setFormData(prev => ({...prev, [item.id]: content}))} 
-                            />
-                          ) : item.id === 'fotos' ? (
-                            <FileUploader 
-                              value={(formData && formData[item.id]) || ''} 
-                              onChange={(value) => setFormData(prev => ({...prev, [item.id]: value}))} 
-                            />
-                          ) : (
-                            <textarea 
-                              value={(formData && formData[item.id]) || ''} 
-                              onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
-                              className="textarea-clean min-h-[120px] text-sm resize-y focus:min-h-[250px] transition-all duration-300" 
-                              placeholder={item.placeholder || "Preencha aqui..."}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {!showAdvanced && (
-                      <div className="flex justify-center py-8">
-                        <button 
-                          onClick={() => setShowGlobalConfirm(true)}
-                          disabled={!!isGenerating}
-                          className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center gap-3"
-                        >
-                          {isGenerating === 'global' ? <Loader2 size={20} className="animate-spin" /> : <Icon name="Sparkles" size={20} />}
-                          Gerar Estudo Técnico Completo
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             ) : (

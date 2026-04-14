@@ -82,7 +82,9 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{uid} {
-      allow read: if isAuthenticated() && (isOwner(uid) || isMaster());
+      allow get: if isAuthenticated() && (isOwner(uid) || isMaster());
+      allow list: if isMaster();
+      
       // New users start as pending, except for the default master email
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && isOwner(uid) && (
         (request.resource.data.status == 'pending' && request.resource.data.role == 'user') ||
@@ -94,10 +96,8 @@ service cloud.firestore {
     }
 
     match /etps/{etpId} {
-      // Allow authenticated users to read their own ETPs without requiring isApproved() check here
-      // to avoid excessive cross-collection lookups and potential permission-denied errors during listing.
-      // Security is maintained because only approved users can CREATE or UPDATE ETPs.
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
+      allow get: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
+      allow list: if isAuthenticated() && (isMaster() || (request.query.limit <= 100 && request.query.filters.userId == request.auth.uid));
       
       allow create: if isApproved() && isValidETP(request.resource.data) && 
                     request.resource.data.userId == request.auth.uid;
