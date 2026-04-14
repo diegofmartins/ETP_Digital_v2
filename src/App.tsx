@@ -5,7 +5,7 @@ import {
   FileText, ClipboardList, Target, CheckCircle, Sparkles, Loader2, Printer, 
   Layout, BarChart, ShieldCheck, Leaf, Settings, Zap, Wand2, Eye, Edit3, 
   AlertTriangle, ChevronDown, ChevronUp, Download, Info, Trash2, PlusCircle,
-  ImagePlus, X
+  ImagePlus, X, ChevronLeft, ChevronRight, ArrowLeft, Lightbulb, Settings2
 } from "lucide-react";
 import { ETPData, ETPField, ETPStructureItem, ETPExample } from "./types";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType, ImageRun } from "docx";
@@ -537,6 +537,15 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [examplePopup, setExamplePopup] = useState<{ fieldId: string, examples: ETPExample[] } | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState<'diagnostic' | 'technical'>('diagnostic');
+  const [expandedSections, setExpandedSections] = useState<string[]>(['0. DIAGNÓSTICO INICIAL', 'I - INFORMAÇÕES GERAIS', 'II - DEMANDA E PROSPECÇÃO DE SOLUÇÕES', 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 'IV - ANÁLISE DE RISCOS E CONCLUSÃO']);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => 
+      prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
+    );
+  };
 
   // Auth Listener
   useEffect(() => {
@@ -892,6 +901,7 @@ export default function App() {
         const generatedData = JSON.parse(resultText);
         setFormData(prev => ({ ...prev, ...generatedData }));
         setShowAdvanced(true);
+        setActiveTab('technical'); // Switch to technical fields after generation
       }
     } catch (err: any) {
       setApiError(err.message || "Erro na geração global. Tente preencher os campos básicos primeiro.");
@@ -1915,112 +1925,212 @@ export default function App() {
 
           <main className="max-w-7xl mx-auto px-6 py-12 no-print">
             {viewMode === 'edit' ? (
-              <div className="flex flex-col lg:flex-row gap-12">
-                <aside className="w-full lg:w-72 space-y-8 sticky top-28 h-fit">
-                  <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Navegação</h3>
-                    <nav className="space-y-1">
-                      {structure.map(item => (
-                        <a 
-                          key={item.id}
-                          href={`#${item.id}`}
-                          className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition-all"
+              <div className="flex flex-col lg:flex-row gap-8">
+              {/* TREE SIDEBAR */}
+              <aside className={`transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-12' : 'w-full lg:w-80'} sticky top-28 h-[calc(100vh-140px)] flex flex-col no-print`}>
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden">
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    {!sidebarCollapsed && <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estrutura do ETP</h3>}
+                    <button 
+                      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                      className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 transition-colors"
+                    >
+                      <Icon name={sidebarCollapsed ? "ChevronRight" : "ChevronLeft"} size={16} />
+                    </button>
+                  </div>
+
+                  {!sidebarCollapsed && (
+                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                      {/* TAB SWITCHER IN SIDEBAR */}
+                      <div className="flex p-1 bg-slate-100 rounded-xl mb-6">
+                        <button 
+                          onClick={() => setActiveTab('diagnostic')}
+                          className={`flex-1 py-2 text-[10px] font-black uppercase tracking-tight rounded-lg transition-all ${activeTab === 'diagnostic' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                         >
-                          <Icon name={item.icon} size={14} />
-                          <span className="truncate">{item.label}</span>
-                        </a>
-                      ))}
-                    </nav>
-                  </div>
-                  
+                          Diagnóstico
+                        </button>
+                        <button 
+                          onClick={() => isMandatoryFilled() && setActiveTab('technical')}
+                          disabled={!isMandatoryFilled()}
+                          className={`flex-1 py-2 text-[10px] font-black uppercase tracking-tight rounded-lg transition-all ${activeTab === 'technical' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 disabled:opacity-30'}`}
+                        >
+                          Técnico
+                        </button>
+                      </div>
+
+                      <nav className="space-y-4">
+                        {Array.from(new Set(structure.map(s => s.section))).map(section => {
+                          const isDiagnosticSection = section === '0. DIAGNÓSTICO INICIAL';
+                          if (activeTab === 'diagnostic' && !isDiagnosticSection) return null;
+                          if (activeTab === 'technical' && isDiagnosticSection) return null;
+
+                          const sectionItems = structure.filter(s => s.section === section);
+                          const isExpanded = expandedSections.includes(section!);
+
+                          return (
+                            <div key={section} className="space-y-1">
+                              <button 
+                                onClick={() => toggleSection(section!)}
+                                className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-50 text-left group transition-colors"
+                              >
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider group-hover:text-indigo-600">{section}</span>
+                                <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={12} className="text-slate-300" />
+                              </button>
+                              
+                              {isExpanded && (
+                                <div className="pl-2 space-y-0.5 border-l-2 border-slate-50 ml-2">
+                                  {sectionItems.map(item => (
+                                    <a 
+                                      key={item.id}
+                                      href={`#${item.id}`}
+                                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+                                    >
+                                      <Icon name={item.icon} size={12} />
+                                      <span className="truncate">{item.label}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </nav>
+                    </div>
+                  )}
+
+                  {!sidebarCollapsed && (
+                    <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+                      <button 
+                        onClick={() => setShowGlobalConfirm(true)}
+                        disabled={!isMandatoryFilled() || !!isGenerating}
+                        className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 ${isMandatoryFilled() ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                      >
+                        <Icon name="Sparkles" size={14} />
+                        Gerar ETP Completo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </aside>
+
+              <div className="flex-1 space-y-6">
+                {/* STEP INDICATOR */}
+                <div className="flex items-center justify-center gap-4 mb-8 no-print">
                   <button 
-                    onClick={() => setShowGlobalConfirm(true)}
-                    disabled={!isMandatoryFilled() || !!isGenerating}
-                    className={`w-full p-6 rounded-[32px] font-black uppercase tracking-widest text-xs transition-all shadow-2xl flex flex-col items-center gap-3 group ${isMandatoryFilled() ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
+                    onClick={() => setActiveTab('diagnostic')}
+                    className={`flex items-center gap-3 px-6 py-3 rounded-2xl transition-all ${activeTab === 'diagnostic' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200'}`}
                   >
-                    <div className={`p-3 rounded-2xl transition-transform ${isMandatoryFilled() ? 'bg-white/20 group-hover:scale-110' : 'bg-slate-300'}`}>
-                      <Icon name="Sparkles" size={24} />
-                    </div>
-                    Gerar ETP Completo
-                    {!isMandatoryFilled() && <span className="text-[8px] opacity-60 normal-case font-medium">Preencha o diagnóstico para liberar</span>}
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${activeTab === 'diagnostic' ? 'bg-white text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>1</div>
+                    <span className="text-xs font-black uppercase tracking-widest">Diagnóstico</span>
                   </button>
-                </aside>
+                  <div className="w-12 h-px bg-slate-200" />
+                  <button 
+                    onClick={() => isMandatoryFilled() && setActiveTab('technical')}
+                    disabled={!isMandatoryFilled()}
+                    className={`flex items-center gap-3 px-6 py-3 rounded-2xl transition-all ${activeTab === 'technical' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200 disabled:opacity-50'}`}
+                  >
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${activeTab === 'technical' ? 'bg-white text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>2</div>
+                    <span className="text-xs font-black uppercase tracking-widest">Detalhamento Técnico</span>
+                  </button>
+                </div>
 
-                <div className="flex-1 space-y-6">
-                  {/* ETP NAME FIELD */}
-                  <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                        <Icon name="Wand2" size={24} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Comece por aqui</h2>
-                        <p className="text-slate-500 text-sm">Dê um nome ao seu projeto e responda ao diagnóstico inicial para liberar a IA.</p>
-                      </div>
-                    </div>
-                    
-                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                      <Icon name="Edit3" size={14} />
-                      Nome do ETP (Identificação Interna)
-                    </label>
-                    <input 
-                      type="text"
-                      value={formData?.etp_name || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, etp_name: e.target.value }))}
-                      placeholder="Ex: Aquisição de Notebooks - TI 2026"
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
-                    />
-                  </div>
-
-                  {/* MANDATORY QUESTIONS FIRST */}
+                {activeTab === 'diagnostic' ? (
                   <div className="space-y-6">
-                    <div className="flex items-center gap-3 px-2">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                        <Icon name="ClipboardCheck" size={20} />
+                    {/* ETP NAME FIELD */}
+                    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                          <Icon name="Wand2" size={24} />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-black text-slate-900 tracking-tight">Comece por aqui</h2>
+                          <p className="text-slate-500 text-sm">Dê um nome ao seu projeto e responda ao diagnóstico inicial para liberar a IA.</p>
+                        </div>
                       </div>
-                      <div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Diagnóstico Inicial</h2>
-                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Campos Obrigatórios para Geração</p>
+                      
+                      <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                        <Icon name="Edit3" size={14} />
+                        Nome do ETP (Identificação Interna)
+                      </label>
+                      <input 
+                        type="text"
+                        value={formData?.etp_name || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, etp_name: e.target.value }))}
+                        placeholder="Ex: Aquisição de Notebooks - TI 2026"
+                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
+                      />
+                    </div>
+
+                    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-3 mb-8">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                          <Icon name="ClipboardList" size={20} />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-black text-slate-900 tracking-tight">Diagnóstico Inicial</h2>
+                          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Responda para fundamentar o estudo</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-8">
+                        {structure.filter(item => item.section === '0. DIAGNÓSTICO INICIAL').map(item => (
+                          <div key={item.id} id={item.id} className="group scroll-mt-24">
+                            <div className="flex justify-between items-start mb-3">
+                              <label className="flex items-center gap-2 text-[11px] font-black text-slate-600 uppercase tracking-tight">
+                                <span className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-indigo-600 text-[10px] group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                  {structure.filter(s => s.section === '0. DIAGNÓSTICO INICIAL').indexOf(item) + 1}
+                                </span>
+                                {item.label}
+                              </label>
+                              {item.examples && (
+                                <button 
+                                  onClick={() => setExamplePopup({ fieldId: item.id, examples: item.examples! })}
+                                  className="text-[10px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-4 py-2 rounded-xl hover:bg-indigo-50 transition-all shadow-sm flex items-center gap-2"
+                                >
+                                  <Icon name="Lightbulb" size={12} /> Ver Exemplos
+                                </button>
+                              )}
+                            </div>
+                            <textarea 
+                              value={(formData && formData[item.id]) || ''} 
+                              onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
+                              className="textarea-clean min-h-[120px] text-sm font-medium text-slate-600 bg-slate-50/50 border-slate-100 focus:bg-white focus:border-indigo-200" 
+                              placeholder={item.placeholder}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center">
+                        {!isMandatoryFilled() ? (
+                          <div className="text-center space-y-4">
+                            <div className="flex justify-center gap-2">
+                              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                                <div key={i} className={`w-3 h-3 rounded-full transition-all ${formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData]?.length > 10 ? 'bg-green-500 scale-110' : 'bg-slate-200'}`} />
+                              ))}
+                            </div>
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Complete o diagnóstico para prosseguir</p>
+                          </div>
+                        ) : (
+                          <motion.button 
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            onClick={() => setShowGlobalConfirm(true)}
+                            className="bg-indigo-600 text-white px-10 py-5 rounded-[32px] font-black uppercase tracking-widest text-sm hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-200 flex items-center gap-4 group"
+                          >
+                            <div className="bg-white/20 p-2 rounded-xl group-hover:rotate-12 transition-transform">
+                              <Icon name="Sparkles" size={24} />
+                            </div>
+                            Gerar Estudo Técnico Completo
+                          </motion.button>
+                        )}
                       </div>
                     </div>
-                    
-                    {structure.filter(item => item.section === '0. DIAGNÓSTICO INICIAL').map(item => (
-                      <div key={item.id} id={item.id} className="bg-white rounded-3xl border-2 border-slate-100 shadow-sm overflow-hidden transition-all hover:border-indigo-200">
-                        <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-indigo-600 shadow-sm">
-                              <Icon name={item.icon} size={20} />
-                            </div>
-                            <div>
-                              <h3 className="text-xs font-black uppercase tracking-widest text-slate-700">{item.label}</h3>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{item.instruction}</p>
-                            </div>
-                          </div>
-                          {item.examples && (
-                            <button 
-                              onClick={() => setExamplePopup({ fieldId: item.id, examples: item.examples! })}
-                              className="text-[10px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-4 py-2 rounded-xl hover:bg-indigo-50 transition-all shadow-sm flex items-center gap-2"
-                            >
-                              <Icon name="Lightbulb" size={12} /> Ver Exemplos
-                            </button>
-                          )}
-                        </div>
-                        <div className="p-8">
-                          <textarea 
-                            value={(formData && formData[item.id]) || ''} 
-                            onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
-                            className="textarea-clean min-h-[150px] text-sm font-medium text-slate-600" 
-                            placeholder={item.placeholder}
-                          />
-                        </div>
-                      </div>
-                    ))}
                   </div>
-
-                  {/* TECHNICAL FIELDS */}
-                  {(isMandatoryFilled() || showAdvanced) ? (
-                    <div className="pt-12 space-y-6">
-                      <div className="flex items-center gap-3 px-2">
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                      <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-lg">
                           <Icon name="Settings2" size={20} />
                         </div>
@@ -2029,86 +2139,74 @@ export default function App() {
                           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Detalhamento Técnico do Objeto</p>
                         </div>
                       </div>
-
-                      {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(item.id)).map(item => (
-                        <div key={item.id} id={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md">
-                          <div className="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-indigo-600">
-                                <Icon name={item.icon} size={16} />
-                              </div>
-                              <div>
-                                <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">{item.label}</h3>
-                                {item.instruction && <p className="text-[9px] text-slate-400 font-medium uppercase mt-0.5">{item.instruction}</p>}
-                              </div>
-                            </div>
-                            {item.isAiEnabled !== false && (
-                              <button 
-                                onClick={() => handleAiAssist(item.id)} 
-                                disabled={isGenerating !== null} 
-                                className="text-[9px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-50 flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
-                              >
-                                {isGenerating === item.id ? <Loader2 size={10} className="animate-spin" /> : <Icon name="Sparkles" size={10} />}
-                                Refinar com IA
-                              </button>
-                            )}
-                          </div>
-                          <div className="p-6">
-                            {item.id === 'tabela_estimativa_quantitativos_precos' ? (
-                              <TiptapEditor 
-                                content={(formData && formData[item.id]) || ''} 
-                                onChange={(content) => setFormData(prev => ({...prev, [item.id]: content}))} 
-                              />
-                            ) : item.id === 'fotos' ? (
-                              <FileUploader 
-                                value={(formData && formData[item.id]) || ''} 
-                                onChange={(value) => setFormData(prev => ({...prev, [item.id]: value}))} 
-                              />
-                            ) : (
-                              <textarea 
-                                value={(formData && formData[item.id]) || ''} 
-                                onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
-                                className="textarea-clean min-h-[120px] text-sm resize-y focus:min-h-[250px] transition-all duration-300" 
-                                placeholder={item.placeholder || "Preencha aqui..."}
-                              />
-                            )}
-                          </div>
-                        </div>
-                      ))}
-
-                      {!showAdvanced && (
-                        <div className="flex justify-center py-8">
-                          <button 
-                            onClick={() => setShowGlobalConfirm(true)}
-                            disabled={!isMandatoryFilled() || !!isGenerating}
-                            className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl flex items-center gap-3 ${isMandatoryFilled() ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'}`}
-                          >
-                            {isGenerating === 'global' ? <Loader2 size={20} className="animate-spin" /> : <Icon name="Sparkles" size={20} />}
-                            Gerar Estudo Técnico Completo
-                          </button>
-                        </div>
-                      )}
+                      <button 
+                        onClick={() => setActiveTab('diagnostic')}
+                        className="text-[10px] font-black text-indigo-600 uppercase flex items-center gap-2 hover:underline"
+                      >
+                        <Icon name="ArrowLeft" size={12} /> Voltar ao Diagnóstico
+                      </button>
                     </div>
-                  ) : (
-                    <div className="pt-12">
-                      <div className="bg-slate-100 rounded-[32px] p-12 text-center border-2 border-dashed border-slate-200">
-                        <div className="bg-white w-16 h-16 rounded-2xl flex items-center justify-center text-indigo-600 mx-auto mb-6 shadow-sm">
-                          <Icon name="ShieldCheck" size={32} />
+
+                    {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(item.id)).map(item => (
+                      <div key={item.id} id={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md">
+                        <div className="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-indigo-600">
+                              <Icon name={item.icon} size={16} />
+                            </div>
+                            <div>
+                              <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">{item.label}</h3>
+                              {item.instruction && <p className="text-[9px] text-slate-400 font-medium uppercase mt-0.5">{item.instruction}</p>}
+                            </div>
+                          </div>
+                          {item.isAiEnabled !== false && (
+                            <button 
+                              onClick={() => handleAiAssist(item.id)} 
+                              disabled={isGenerating !== null} 
+                              className="text-[9px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-50 flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                            >
+                              {isGenerating === item.id ? <Loader2 size={10} className="animate-spin" /> : <Icon name="Sparkles" size={10} />}
+                              Refinar com IA
+                            </button>
+                          )}
                         </div>
-                        <h3 className="text-xl font-black text-slate-800 mb-2">Seções Bloqueadas</h3>
-                        <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
-                          Para liberar o detalhamento técnico e as ferramentas de IA, você precisa preencher detalhadamente todos os campos do <strong>Diagnóstico Inicial</strong> acima.
-                        </p>
-                        <div className="mt-8 flex justify-center gap-2">
-                          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                            <div key={i} className={`w-2 h-2 rounded-full ${formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData]?.length > 10 ? 'bg-green-500' : 'bg-slate-300'}`} />
-                          ))}
+                        <div className="p-6">
+                          {item.id === 'tabela_estimativa_quantitativos_precos' ? (
+                            <TiptapEditor 
+                              content={(formData && formData[item.id]) || ''} 
+                              onChange={(content) => setFormData(prev => ({...prev, [item.id]: content}))} 
+                            />
+                          ) : item.id === 'fotos' ? (
+                            <FileUploader 
+                              value={(formData && formData[item.id]) || ''} 
+                              onChange={(value) => setFormData(prev => ({...prev, [item.id]: value}))} 
+                            />
+                          ) : (
+                            <textarea 
+                              value={(formData && formData[item.id]) || ''} 
+                              onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
+                              className="textarea-clean min-h-[120px] text-sm resize-y focus:min-h-[250px] transition-all duration-300" 
+                              placeholder={item.placeholder || "Preencha aqui..."}
+                            />
+                          )}
                         </div>
                       </div>
+                    ))}
+
+                    <div className="flex justify-center py-8">
+                      <button 
+                        onClick={() => setShowGlobalConfirm(true)}
+                        disabled={!!isGenerating}
+                        className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center gap-3"
+                      >
+                        {isGenerating === 'global' ? <Loader2 size={20} className="animate-spin" /> : <Icon name="Sparkles" size={20} />}
+                        Regerar Estudo Completo
+                      </button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
+            </div>
             ) : (
               <motion.div 
                 initial={{ opacity: 0 }}
