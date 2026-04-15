@@ -221,7 +221,7 @@ const structure: ETPStructureItem[] = [
     label: '6. DESCRIÇÃO DOS REQUISITOS DA CONTRATAÇÃO', 
     icon: 'ShieldCheck', 
     section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
-    isAiEnabled: false,
+    isAiEnabled: true,
     placeholder: 'Campo informativo ou observações gerais sobre os requisitos.',
     helpText: 'São os elementos necessários ao objeto a ser contratado, para que atenda adequadamente à necessidade que originou a contratação.\nSe a "Descrição da Necessidade" é o "problema", os "Requisitos da Contratação" são a "lista de regras e exigências mínimas" que a solução (seja um produto ou serviço) deve obrigatoriamente cumprir para ser considerada aceitável pela CMC. O objetivo é garantir a qualidade, o desempenho, a segurança e a padronização do que será contratado. É crucial que essas exigências sejam essenciais para atender à necessidade e não restrinjam indevidamente a competição a um único fornecedor.\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).'
   },
