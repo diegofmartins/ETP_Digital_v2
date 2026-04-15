@@ -64,5 +64,6 @@ export interface ETPStructureItem {
   isEssential?: boolean;
   placeholder?: string;
   instruction?: string;
+  helpText?: string;
   examples?: ETPExample[];
 }

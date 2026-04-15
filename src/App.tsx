@@ -10,12 +10,7 @@ import {
 import { ETPData, ETPField, ETPStructureItem, ETPExample } from "./types";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType, ImageRun } from "docx";
 import { saveAs } from "file-saver";
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import { Table as TiptapTable } from '@tiptap/extension-table';
-import { TableRow as TiptapTableRow } from '@tiptap/extension-table-row';
-import { TableCell as TiptapTableCell } from '@tiptap/extension-table-cell';
-import { TableHeader as TiptapTableHeader } from '@tiptap/extension-table-header';
+import JoditEditor from 'jodit-react';
 
 import { auth, db, googleProvider, OperationType, handleFirestoreError } from "./firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -37,6 +32,9 @@ Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP
    - Retorne APENAS o texto que será inserido diretamente no documento final.
    - Use listas com hífens (-) para clareza quando necessário.
    - Utilize os dados de DIAGNÓSTICO INICIAL para fundamentar todas as seções.
+
+8. REGRA DE EXCLUSÃO:
+   - NUNCA gere conteúdo para o campo "assinaturas" (Assinaturas). Este campo deve permanecer vazio para preenchimento manual do usuário.
 
 REGRA CRÍTICA DE PREENCHIMENTO:
 Se os dados fornecidos no Diagnóstico Inicial forem insuficientes para gerar um conteúdo técnico completo e preciso para um determinado campo, você DEVE:
@@ -176,14 +174,16 @@ const structure: ETPStructureItem[] = [
     isAiEnabled: true, 
     isEssential: true,
     placeholder: 'Descreva o problema atual, não a solução.',
-    instruction: 'Foque no problema (ex: lentidão, falta de material) e no interesse público.'
+    instruction: 'Foque no problema (ex: lentidão, falta de material) e no interesse público.',
+    helpText: 'A área demandante deve descrever a necessidade da compra/contratação, evidenciando o problema identificado e a real necessidade que ele gera, bem como o que se almeja alcançar com a contratação. É a identificação e caracterização do problema a ser resolvido. Justifica a decisão de contratar uma solução ou parte de uma solução, devendo responder a questões como: Qual é o problema que se pretende resolver? Quais são os atores interessados na solução desse problema e quais as perspectivas desses atores sobre o problema? Qual é o interesse público a ser atendido? Quais os resultados e os benefícios que serão alcançados ao resolvê-lo? É fundamental focar no problema, e não na solução. A justificativa deve ser clara e objetiva, demonstrando a relação entre a necessidade e a finalidade da contratação, evitando termos genéricos ou subjetivos. Deve-se considerar o histórico de contratações anteriores, se houver, e os impactos da não contratação.'
   },
   { 
     id: 'levantamento_mercado', 
     label: '3. LEVANTAMENTO DE MERCADO E ANÁLISE DAS ALTERNATIVAS POSSÍVEIS', 
     icon: 'BarChart', 
     section: 'II - DEMANDA E PROSPECÇÃO DE SOLUÇÕES', 
-    isAiEnabled: true 
+    isAiEnabled: true,
+    helpText: 'Consiste em realizar pesquisa de mercado, a fim de identificar as soluções disponíveis que atendam à necessidade da contratação e aos requisitos estabelecidos, bem como conhecer as condições usuais de aquisição ou de execução do objeto. Essa pesquisa possibilita identificar o que o mercado tem a oferecer para atender à necessidade da Administração, e ter uma noção dos custos envolvidos, comparando o custo-benefício de cada tipo de solução cogitado para a resolução do problema. Não se trata apenas de pesquisar preços, mas de analisar modelos de contratação, tecnologias e abordagens distintas. Deve-se utilizar fontes de pesquisa diversificadas, incluindo: Consulta direta a potenciais fornecedores; Consulta junto a outras organizações públicas; Pesquisa publicada em mídia especializada. A análise deve contemplar a viabilidade técnica e econômica de cada alternativa, justificando a escolha da solução que melhor atenda ao interesse público.'
   },
   { 
     id: 'objeto_sucinto', 
@@ -193,7 +193,8 @@ const structure: ETPStructureItem[] = [
     isAiEnabled: true, 
     isEssential: true,
     placeholder: 'Ex: Aquisição de 50 notebooks para o setor administrativo',
-    instruction: 'Defina de forma concisa o objeto.'
+    instruction: 'Defina de forma concisa o objeto.',
+    helpText: 'Definir, de forma concisa, clara e precisa, o objeto que se pretende contratar, incluídos sua natureza, os quantitativos, o prazo do contrato e a possibilidade de sua prorrogação. Indicar se a contratação tem por objeto: compra ou locação de bens ou prestação de serviço; se será contínuo ou não contínuo; se será entregue em parcela única ou o prazo de vigência (1 a 5 anos); se o objeto é comum ou especial; se a adjudicação será por lotes ou por itens; se haverá dedicação exclusiva de mão de obra (DEMO). A descrição deve ser suficiente para permitir a correta identificação do que se pretende contratar, sem conter especificações excessivas ou irrelevantes que possam restringir a competitividade.'
   },
   { 
     id: 'especificacoes_tecnicas', 
@@ -203,14 +204,16 @@ const structure: ETPStructureItem[] = [
     isAiEnabled: true, 
     isEssential: true,
     placeholder: 'Descreva as características mínimas do que será contratado.',
-    instruction: 'Liste os requisitos técnicos básicos.'
+    instruction: 'Liste os requisitos técnicos básicos.',
+    helpText: 'Descreva as características mínimas do que será contratado, garantindo a qualidade e o desempenho necessários, sem restringir indevidamente a competição. As especificações devem ser claras e objetivas, utilizando normas técnicas reconhecidas sempre que possível. Devem contemplar requisitos de desempenho, durabilidade, segurança e sustentabilidade. É importante evitar marcas específicas, salvo se tecnicamente justificado, utilizando sempre a expressão "ou equivalente".'
   },
   { 
     id: 'descricao_solucao_integral', 
     label: '5. DESCRIÇÃO DA SOLUÇÃO COMO UM TODO', 
     icon: 'Layout', 
     section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
-    isAiEnabled: true 
+    isAiEnabled: true,
+    helpText: 'Uma solução é o conjunto de todos os elementos (bens, serviços e outros) necessários para, de forma integrada, gerar os resultados que atendam à necessidade. Devem ser descritos todos os elementos a se produzir/contratar/executar para que a contratação produza os resultados pretendidos. Esta descrição deve considerar todo o "ciclo de vida" do produto ou serviço: como ele será entregue ou instalado, como será sua manutenção, os custos durante o uso e como será seu descarte ou encerramento ao final do contrato. Deve-se detalhar a integração entre os diversos componentes da solução e como eles contribuem para a resolução do problema identificado.'
   },
   { 
     id: 'requisitos_header', 
@@ -218,20 +221,21 @@ const structure: ETPStructureItem[] = [
     icon: 'ShieldCheck', 
     section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
     isAiEnabled: false,
-    placeholder: 'Campo informativo ou observações gerais sobre os requisitos.'
+    placeholder: 'Campo informativo ou observações gerais sobre os requisitos.',
+    helpText: 'São os elementos necessários ao objeto a ser contratado, para que atenda adequadamente à necessidade que originou a contratação. O objetivo é garantir a qualidade, o desempenho, a segurança e a padronização do que será contratado. É crucial que essas exigências sejam essenciais para atender à necessidade e não restrinjam indevidamente a competição. Os requisitos podem ser técnicos, operacionais, de manutenção, de segurança, de sustentabilidade, entre outros. Devem ser definidos de forma a permitir a mensuração da conformidade da solução entregue.'
   },
-  { id: 'requisitos_exigencias', label: '6.1. Exigências Internas e Externas à CMC', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_qualidade', label: '6.2. Padrões de Qualidade Exigidos', icon: 'CheckCircle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_marca', label: '6.2.1. Marca de Referência', icon: 'Target', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_amostra', label: '6.3. Exigência de Amostra ou Prova de Conceito (POC)', icon: 'Eye', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_transicao', label: '6.4. Necessidade de transição contratual', icon: 'Zap', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'garantia_contratual', label: '6.5.1. Garantia de Execução do Objeto (Garantia Contratual)', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'garantia_tecnica', label: '6.5.2. Garantia Técnica (Garantia do Produto/Serviço)', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'assistencia_tecnica', label: '6.5.3. Exigências de manutenção e assistência técnica', icon: 'Settings', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_vistoria', label: '6.6. Necessidade de Vistoria', icon: 'Eye', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_subcontratacao', label: '6.7. Subcontratação', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_execucao', label: '6.8. Execução do Objeto', icon: 'Zap', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'requisitos_dimensionamento', label: '6.9. Informações Importantes para o Dimensionamento da Proposta', icon: 'BarChart', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
+  { id: 'requisitos_exigencias', label: '6.1. Exigências Internas e Externas à CMC', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Considerar as exigências internas da CMC (segurança da informação, proteção de dados pessoais, gestão documental, gestão de riscos) e exigências externas (requisitos legais, infralegais e regulatórios, aderência a normas técnicas, de saúde e de segurança do trabalho). Devem ser listadas as normas, leis e regulamentos específicos que a contratada deve observar durante a execução do objeto.' },
+  { id: 'requisitos_qualidade', label: '6.2. Padrões de Qualidade Exigidos', icon: 'CheckCircle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Definir os padrões de qualidade a serem exigidos na execução do objeto, os quais não devem exceder o necessário para atender à necessidade. Vale lembrar que mesmo contratações pelo MENOR PREÇO devem estabelecer requisitos mínimos de qualidade. Os padrões podem incluir certificações, normas ABNT, ISO, ou outros critérios objetivos de avaliação da qualidade do produto ou serviço.' },
+  { id: 'requisitos_marca', label: '6.2.1. Marca de Referência', icon: 'Target', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar marcas de referência, se for o caso, seguidas das expressões "equivalente/similar ou de melhor qualidade". As marcas são utilizadas unicamente como referência de qualidade para definir as características mínimas de desempenho e durabilidade desejadas. O uso de marcas deve ser justificado tecnicamente, demonstrando que a referência é necessária para a correta compreensão dos requisitos de qualidade.' },
+  { id: 'requisitos_amostra', label: '6.3. Exigência de Amostra ou Prova de Conceito (POC)', icon: 'Eye', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'A Administração poderá solicitar amostras, exames de conformidade ou provas de conceito (POC) para avaliar a conformidade do objeto. Tais medidas possuem caráter excepcional e devem ser justificadas formalmente, pois podem restringir a competição. Deve-se definir claramente os critérios de avaliação e os prazos para apresentação e análise das amostras ou realização da POC.' },
+  { id: 'requisitos_transicao', label: '6.4. Necessidade de transição contratual', icon: 'Zap', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Informar se há necessidade de transição contratual com transferência de conhecimento, tecnologia e técnicas empregadas, capacitação dos técnicos do contratante ou do novo contratado. Deve-se descrever o plano de transição, incluindo cronograma, responsabilidades e os recursos necessários para garantir a continuidade dos serviços sem perda de qualidade ou segurança.' },
+  { id: 'garantia_contratual', label: '6.5.1. Garantia de Execução do Objeto (Garantia Contratual)', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar se é necessária a exigência de garantia para a execução do objeto (5% em geral / 10% para alta complexidade). A decisão de não exigir garantia também deve ser acompanhada de justificativa técnica ou econômica explícita. A garantia visa assegurar o cumprimento das obrigações contratuais e a reparação de eventuais danos causados pela contratada.' },
+  { id: 'garantia_tecnica', label: '6.5.2. Garantia Técnica (Garantia do Produto/Serviço)', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'A Contratada deverá fornecer garantia integral contra vícios e defeitos de fabricação. Indicar o prazo mínimo em dias ou conforme o Código de Defesa do Consumidor, prevalecendo o que for maior. Deve-se detalhar a abrangência da garantia, os prazos de atendimento e as condições para sua fruição.' },
+  { id: 'assistencia_tecnica', label: '6.5.3. Exigências de manutenção e assistência técnica', icon: 'Settings', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'As exigências de manutenção e assistência devem contemplar a definição do local de realização dos serviços e se há necessidade de deslocamento de técnico ou unidade local. Devem ser definidos os níveis de serviço (SLA), tempos de resposta e de solução de problemas, bem como a disponibilidade de peças e suporte técnico.' },
+  { id: 'requisitos_vistoria', label: '6.6. Necessidade de Vistoria', icon: 'Eye', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Informar se haverá necessidade de vistoria técnica, agendada com antecedência mínima. Indicar a diretoria/servidor de contato, e-mail, telefone e endereço. A vistoria deve ser facultativa, salvo se tecnicamente indispensável, e deve ser garantida a igualdade de condições a todos os interessados.' },
+  { id: 'requisitos_subcontratacao', label: '6.7. Subcontratação', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar se será admitida a subcontratação (parcial) e qual o percentual permitido (máximo 25%). A subcontratação integral é vedada. Deve ser prévia e expressamente autorizada. A contratada principal permanece integralmente responsável pela execução do objeto e pela qualidade dos serviços prestados pelas subcontratadas.' },
+  { id: 'requisitos_execucao', label: '6.8. Execução do Objeto', icon: 'Zap', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Definir como o contrato deverá produzir os resultados: prazo para início, prazos de entrega (provisória e definitiva), descrição detalhada de métodos, rotinas, tecnologias, frequência, forma de comunicação, localidade e horário de funcionamento. Devem ser estabelecidos marcos de entrega e critérios de aceitação para cada etapa da execução.' },
+  { id: 'requisitos_dimensionamento', label: '6.9. Informações Importantes para o Dimensionamento da Proposta', icon: 'BarChart', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Informar detalhadamente sobre o ambiente e condições gerais de execução: estrutura disponível, restrições de acesso, parcelas às expensas da contratada, etc. Tais informações são cruciais para que os licitantes possam elaborar propostas realistas e competitivas, evitando sobrepreços por incertezas.' },
   { 
     id: 'estimativa_quantidades_texto', 
     label: '7. ESTIMATIVA DAS QUANTIDADES', 
@@ -240,7 +244,8 @@ const structure: ETPStructureItem[] = [
     isAiEnabled: true, 
     isEssential: true,
     placeholder: 'Ex: 50 unidades baseadas no número de servidores novos.',
-    instruction: 'Apresente a relação entre a demanda e o quantitativo.'
+    instruction: 'Apresente a relação entre a demanda e o quantitativo.',
+    helpText: 'Apresentar a relação entre a demanda prevista e os quantitativos, com memórias de cálculo baseadas em dados concretos (ex: série histórica de consumo). O planejamento deve considerar o consumo anual provável. Deve-se justificar a metodologia utilizada para o cálculo das quantidades, demonstrando que elas são adequadas e suficientes para atender à necessidade identificada.'
   },
   { 
     id: 'estimativa_valor_texto', 
@@ -250,20 +255,21 @@ const structure: ETPStructureItem[] = [
     isAiEnabled: true, 
     isEssential: true,
     placeholder: 'Ex: R$ 250.000,00 baseado em pesquisa preliminar.',
-    instruction: 'Indique o valor global estimado para a solução.'
+    instruction: 'Indique o valor global estimado para a solução.',
+    helpText: 'Estimar o valor de cada solução para apoiar a análise de viabilidade e adequação orçamentária. Utilizar fontes diversificadas: contratações similares, mídia especializada, tabelas oficiais, sistemas de governo ou fornecedores. A estimativa deve ser fundamentada em preços de mercado atuais e deve considerar todos os custos diretos e indiretos envolvidos na execução do objeto.'
   },
-  { id: 'tabela_estimativa_quantitativos_precos', label: 'Tabela de Estimativa de Quantitativos e Preços', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'justificativa_parcelamento', label: '9. JUSTIFICATIVAS PARA O PARCELAMENTO OU NÃO DA CONTRATAÇÃO (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'resultados_pretendidos', label: '10. DEMONSTRATIVO DOS RESULTADOS PRETENDIDOS', icon: 'CheckCircle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'providencias_adm', label: '11. PROVIDÊNCIAS A SEREM ADOTADAS PELA ADMINISTRAÇÃO', icon: 'Settings', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'contratacoes_correlatas', label: '12. CONTRATAÇÕES CORRELATAS E/OU INTERDEPENDENTES', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'impactos_ambientais', label: '13. DESCRIÇÃO DE POSSÍVEIS IMPACTOS AMBIENTAIS E RESPECTIVAS MEDIDAS MITIGADORAS', icon: 'Leaf', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'alinhamento_planejamento', label: '14. ALINHAMENTO ENTRE A CONTRATAÇÃO E O PLANEJAMENTO DA CÂMARA MUNICIPAL DE CURITIBA', icon: 'Target', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true },
-  { id: 'posicionamento_conclusivo', label: '15. POSICIONAMENTO CONCLUSIVO SOBRE A ADEQUAÇÃO DA CONTRATAÇÃO PARA O ATENDIMENTO DA NECESSIDADE A QUE SE DESTINA (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'ShieldCheck', section: 'IV - POSICIONAMENTO CONCLUSIVO', isAiEnabled: true },
-  { id: 'analise_riscos_resumo', label: '16. ANÁLISE DE RISCOS QUE POSSAM COMPROMETER O SUCESSO DA LICITAÇÃO (OBRIGATÓRIO - art. 18º, inc. X, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true },
-  { id: 'tabela_riscos_interna', label: 'Anexo I - Riscos Fase Interna', icon: 'Layout', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true },
-  { id: 'tabela_riscos_externa', label: 'Anexo I - Riscos Fase Externa', icon: 'Layout', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true },
-  { id: 'fotos', label: 'Fotos e Ilustrações do Objeto', icon: 'Eye', section: 'VI - ANEXOS FOTOGRÁFICOS', isAiEnabled: false },
+  { id: 'tabela_estimativa_quantitativos_precos', label: 'Tabela de Estimativa de Quantitativos e Preços', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Apresente uma tabela detalhada com os itens, especificações, quantidades e preços estimados. A tabela deve permitir a clara identificação de cada item e a composição do valor total da contratação.' },
+  { id: 'justificativa_parcelamento', label: '9. JUSTIFICATIVAS PARA O PARCELAMENTO OU NÃO DA CONTRATAÇÃO (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'A regra é o parcelamento do objeto, desde que técnica e economicamente viável. O objetivo é aumentar a competição. Não parcelar exige fundamentação robusta no ETP, demonstrando que a divisão do objeto prejudicaria a economia de escala, a integração da solução ou a eficiência administrativa.' },
+  { id: 'resultados_pretendidos', label: '10. DEMONSTRATIVO DOS RESULTADOS PRETENDIDOS', icon: 'CheckCircle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Demonstrar os benefícios e melhorias esperados ("antes e depois"). Pode ser em termos de economicidade, eficácia, eficiência, melhor aproveitamento de recursos ou impactos ambientais positivos. Devem ser definidos indicadores de desempenho para avaliar se os resultados foram alcançados após a execução do contrato.' },
+  { id: 'providencias_adm', label: '11. PROVIDÊNCIAS A SEREM ADOTADAS PELA ADMINISTRAÇÃO', icon: 'Settings', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Medidas que a Administração precisa tomar para viabilizar a execução (infraestrutura, elétrica, climatização, espaço físico, capacitação, etc.). Devem ser concluídas antes do início do contrato. O descumprimento dessas providências pode acarretar atrasos na execução e prejuízos à Administração.' },
+  { id: 'contratacoes_correlatas', label: '12. CONTRATAÇÕES CORRELATAS E/OU INTERDEPENDENTES', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Mapear o ecossistema da necessidade: contratações Interdependentes (essenciais para o funcionamento) e Correlatas (relacionadas). Identificar impactos entre as soluções e garantir que os cronogramas estejam alinhados para evitar ociosidade de recursos ou interrupção de serviços.' },
+  { id: 'impactos_ambientais', label: '13. DESCRIÇÃO DE POSSÍVEIS IMPACTOS AMBIENTAIS E RESPECTIVAS MEDIDAS MITIGADORAS', icon: 'Leaf', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar possíveis impactos ambientais e medidas mitigadoras, considerando todo o ciclo de vida do objeto. O desenvolvimento sustentável é um princípio da Lei 14.133/2021. Devem ser observadas as normas de descarte de resíduos, eficiência energética e uso racional de recursos naturais.' },
+  { id: 'alinhamento_planejamento', label: '14. ALINHAMENTO ENTRE A CONTRATAÇÃO E O PLANEJAMENTO DA CÂMARA MUNICIPAL DE CURITIBA', icon: 'Target', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Demonstrar que a contratação está de acordo com o Plano de Contratações Anual (PCA) e o Planejamento Estratégico da CMC, provando que não é um ato isolado. Deve-se indicar o item específico do PCA ao qual a contratação se refere.' },
+  { id: 'posicionamento_conclusivo', label: '15. POSICIONAMENTO CONCLUSIVO SOBRE A ADEQUAÇÃO DA CONTRATAÇÃO PARA O ATENDIMENTO DA NECESSIDADE A QUE SE DESTINA (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'ShieldCheck', section: 'IV - POSICIONAMENTO CONCLUSIVO', isAiEnabled: true, helpText: 'Concluir sobre a viabilidade técnica e econômica da contratação. Verificar se a necessidade é clara, se o objeto é legal e se os benefícios compensam os custos. O posicionamento deve ser fundamentado em todos os elementos analisados no ETP.' },
+  { id: 'analise_riscos_resumo', label: '16. ANÁLISE DE RISCOS QUE POSSAM COMPROMETER O SUCESSO DA LICITAÇÃO (OBRIGATÓRIO - art. 18º, inc. X, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Registrar riscos que possam comprometer a licitação ou o contrato (processo licitatório, providências prévias, gestão contratual) e propor medidas de tratamento/mitigação. A análise deve considerar a probabilidade de ocorrência e o impacto de cada risco.' },
+  { id: 'tabela_riscos_interna', label: 'Anexo I - Riscos Fase Interna', icon: 'Layout', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Tabela detalhada dos riscos identificados na fase interna do processo, incluindo descrição, impacto, probabilidade e medidas de mitigação.' },
+  { id: 'tabela_riscos_externa', label: 'Anexo I - Riscos Fase Externa', icon: 'Layout', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Tabela detalhada dos riscos identificados na fase externa do processo, incluindo descrição, impacto, probabilidade e medidas de mitigação.' },
+  { id: 'fotos', label: 'Fotos e Ilustrações do Objeto', icon: 'Eye', section: 'VI - ANEXOS FOTOGRÁFICOS', isAiEnabled: false, helpText: 'Anexe fotos ou ilustrações que ajudem a identificar e descrever o objeto da contratação. As imagens devem ser nítidas e acompanhadas de legendas explicativas.' },
   { 
     id: 'assinaturas', 
     label: 'Assinaturas (NOME, Lotação - uma por linha)', 
@@ -271,7 +277,8 @@ const structure: ETPStructureItem[] = [
     section: 'VII - ASSINATURAS', 
     isAiEnabled: false, 
     isEssential: true,
-    placeholder: 'Maria Santos, Diretoria de Patrimônio e Serviços\nJoão Silva, Seção Administrativa e Financeira'
+    placeholder: 'Maria Santos, Diretoria de Patrimônio e Serviços\nJoão Silva, Seção Administrativa e Financeira',
+    helpText: 'Insira o nome e a lotação dos responsáveis pela elaboração do ETP, um por linha. As assinaturas devem ser colhidas após a finalização do documento.'
   },
 ];
 
@@ -286,139 +293,6 @@ const Icon = ({ name, size = 16, className = "" }: { name: string, size?: number
   const LucideIcon = IconMap[name];
   if (!LucideIcon) return null;
   return <LucideIcon size={size} className={className} />;
-};
-
-const TiptapEditor = ({ content, onChange }: { content: string, onChange: (content: string) => void }) => {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TiptapTable.configure({
-        resizable: true,
-      }),
-      TiptapTableRow,
-      TiptapTableHeader,
-      TiptapTableCell,
-    ],
-    content: content,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
-    },
-  });
-
-  useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
-    }
-  }, [content, editor]);
-
-  if (!editor) {
-    return null;
-  }
-
-  return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-      <div className="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap gap-1">
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`p-2 rounded border border-slate-200 hover:bg-slate-200 transition-colors ${editor.isActive('bold') ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-white text-slate-600'}`}
-          title="Negrito"
-        >
-          <Icon name="Edit3" size={14} />
-        </button>
-        <div className="w-px h-8 bg-slate-200 mx-1" />
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-          className="p-2 rounded border border-slate-200 bg-white hover:bg-slate-200 transition-colors flex items-center gap-1 text-[10px] font-bold text-slate-600"
-          title="Inserir Tabela"
-        >
-          <Icon name="PlusCircle" size={14} /> Inserir Tabela
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().addColumnBefore().run()}
-          className="px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-200 transition-colors text-[9px] font-bold text-slate-500 disabled:opacity-30"
-          disabled={!editor.can().addColumnBefore()}
-        >
-          + Col Esq
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().addColumnAfter().run()}
-          className="px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-200 transition-colors text-[9px] font-bold text-slate-500 disabled:opacity-30"
-          disabled={!editor.can().addColumnAfter()}
-        >
-          + Col Dir
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().addRowBefore().run()}
-          className="px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-200 transition-colors text-[9px] font-bold text-slate-500 disabled:opacity-30"
-          disabled={!editor.can().addRowBefore()}
-        >
-          + Lin Cima
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().addRowAfter().run()}
-          className="px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-200 transition-colors text-[9px] font-bold text-slate-500 disabled:opacity-30"
-          disabled={!editor.can().addRowAfter()}
-        >
-          + Lin Baixo
-        </button>
-        <div className="w-px h-8 bg-slate-200 mx-1" />
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().deleteColumn().run()}
-          className="px-2 py-1 rounded border border-orange-200 bg-white hover:bg-orange-50 transition-colors text-[9px] font-bold text-orange-600 disabled:opacity-30"
-          disabled={!editor.can().deleteColumn()}
-        >
-          Excluir Coluna
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().deleteRow().run()}
-          className="px-2 py-1 rounded border border-orange-200 bg-white hover:bg-orange-50 transition-colors text-[9px] font-bold text-orange-600 disabled:opacity-30"
-          disabled={!editor.can().deleteRow()}
-        >
-          Excluir Linha
-        </button>
-        <div className="w-px h-8 bg-slate-200 mx-1" />
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().deleteTable().run()}
-          className="px-2 py-1 rounded border border-red-200 bg-white hover:bg-red-50 transition-colors text-[9px] font-bold text-red-600 disabled:opacity-30"
-          disabled={!editor.can().deleteTable()}
-        >
-          Excluir Tabela
-        </button>
-      </div>
-      <EditorContent editor={editor} className="p-4 min-h-[200px] prose prose-sm max-w-none focus:outline-none" />
-      <style>{`
-        .ProseMirror table {
-          border-collapse: collapse;
-          table-layout: fixed;
-          width: 100%;
-          margin: 0;
-          overflow: hidden;
-        }
-        .ProseMirror td, .ProseMirror th {
-          min-width: 1em;
-          border: 1px solid #ced4da;
-          padding: 3px 5px;
-          vertical-align: top;
-          box-sizing: border-box;
-          position: relative;
-        }
-        .ProseMirror th {
-          font-weight: bold;
-          text-align: left;
-          background-color: #f1f3f5;
-        }
-      `}</style>
-    </div>
-  );
 };
 
 const FileUploader = ({ value, onChange }: { value: string, onChange: (value: string) => void }) => {
@@ -537,6 +411,7 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [examplePopup, setExamplePopup] = useState<{ fieldId: string, examples: ETPExample[] } | null>(null);
+  const [helpPopup, setHelpPopup] = useState<{ title: string, content: string } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'diagnostic' | 'technical'>('diagnostic');
   const [expandedSections, setExpandedSections] = useState<string[]>(['0. DIAGNÓSTICO INICIAL', 'I - INFORMAÇÕES GERAIS', 'II - DEMANDA E PROSPECÇÃO DE SOLUÇÕES', 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 'IV - ANÁLISE DE RISCOS E CONCLUSÃO']);
@@ -655,13 +530,15 @@ export default function App() {
 
     let q;
     if (userRole === 'master' && view === 'admin') {
-      q = query(collection(db, 'etps'), where('status', '!=', 'deleted'));
+      q = query(collection(db, 'etps'));
     } else {
-      q = query(collection(db, 'etps'), where('userId', '==', user.uid), where('status', '!=', 'deleted'));
+      q = query(collection(db, 'etps'), where('userId', '==', user.uid));
     }
 
     return onSnapshot(q, (snapshot) => {
-      const d = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const d = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((doc: any) => doc.status !== 'deleted');
       setDrafts(d);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'etps');
@@ -893,7 +770,10 @@ export default function App() {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       const filledFields = Object.keys(formData).filter(key => !!formData[key as keyof ETPData] && formData[key as keyof ETPData].length > 0);
-      const emptyFields = structure.filter(item => !formData[item.id as keyof ETPData] || formData[item.id as keyof ETPData].length === 0).map(item => item.id);
+      const emptyFields = structure
+        .filter(item => item.isAiEnabled !== false && item.section !== '0. DIAGNÓSTICO INICIAL')
+        .filter(item => !formData[item.id as keyof ETPData] || formData[item.id as keyof ETPData].length === 0)
+        .map(item => item.id);
 
       const diagnosticInfo = `
       - Problema/Necessidade: ${formData.diag_problema_necessidade}
@@ -1500,6 +1380,43 @@ export default function App() {
                 Sim, Limpar
               </button>
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {helpPopup && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                  <Icon name="Info" size={24} />
+                </div>
+                <h3 className="text-xl font-black text-slate-900">Orientações de Preenchimento</h3>
+              </div>
+              <button onClick={() => setHelpPopup(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <Icon name="X" size={20} className="text-slate-400" />
+              </button>
+            </div>
+            
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
+              <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4">{helpPopup.title}</h4>
+              <div className="text-slate-600 text-sm leading-relaxed space-y-4 whitespace-pre-wrap">
+                {helpPopup.content}
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setHelpPopup(null)}
+              className="w-full mt-8 px-6 py-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100"
+            >
+              Entendi
+            </button>
           </motion.div>
         </div>
       )}
@@ -2240,23 +2157,53 @@ export default function App() {
                               {item.instruction && <p className="text-[9px] text-slate-400 font-medium uppercase mt-0.5">{item.instruction}</p>}
                             </div>
                           </div>
-                          {item.isAiEnabled !== false && (
-                            <button 
-                              onClick={() => handleAiAssist(item.id)} 
-                              disabled={isGenerating !== null} 
-                              className="text-[9px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-50 flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
-                            >
-                              {isGenerating === item.id ? <Loader2 size={10} className="animate-spin" /> : <Icon name="Sparkles" size={10} />}
-                              Refinar com IA
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {item.helpText && (
+                              <button 
+                                onClick={() => setHelpPopup({ title: item.label, content: item.helpText! })}
+                                className="text-[9px] font-black text-slate-600 uppercase bg-white border border-slate-200 px-3 py-1.5 rounded-full hover:bg-slate-50 flex items-center gap-2 shadow-sm transition-all"
+                              >
+                                <Icon name="Info" size={10} />
+                                Ajuda
+                              </button>
+                            )}
+                            {item.isAiEnabled !== false && (
+                              <button 
+                                onClick={() => handleAiAssist(item.id)} 
+                                disabled={isGenerating !== null} 
+                                className="text-[9px] font-black text-indigo-600 uppercase bg-white border border-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-50 flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                              >
+                                {isGenerating === item.id ? <Loader2 size={10} className="animate-spin" /> : <Icon name="Sparkles" size={10} />}
+                                Refinar com IA
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className="p-6">
                           {item.id === 'tabela_estimativa_quantitativos_precos' ? (
-                            <TiptapEditor 
-                              content={(formData && formData[item.id]) || ''} 
-                              onChange={(content) => setFormData(prev => ({...prev, [item.id]: content}))} 
-                            />
+                            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                              <JoditEditor 
+                                value={(formData && formData[item.id]) || ''} 
+                                config={{
+                                  readonly: false,
+                                  toolbarAdaptive: false,
+                                  buttons: [
+                                    'table', '|',
+                                    'bold', 'italic', 'underline', '|',
+                                    'align', 'list', '|',
+                                    'undo', 'redo', '|',
+                                    'fullsize', 'source'
+                                  ],
+                                  height: 400,
+                                  placeholder: 'Utilize a ferramenta de tabela acima para compor os quantitativos e preços...',
+                                  language: 'pt_br',
+                                  askBeforePasteHTML: false,
+                                  askBeforePasteFromWord: false,
+                                  defaultActionOnPaste: 'insert_clear_html',
+                                }}
+                                onBlur={(newContent) => setFormData(prev => ({...prev, [item.id]: newContent}))} 
+                              />
+                            </div>
                           ) : item.id === 'fotos' ? (
                             <FileUploader 
                               value={(formData && formData[item.id]) || ''} 
