@@ -93,11 +93,14 @@ service cloud.firestore {
       // Only Master can update status or roles
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
                     (isMaster() || (isOwner(uid) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status));
+      
+      // Only Master can delete users
+      allow delete: if isMaster();
     }
 
     match /etps/{etpId} {
       allow get: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
-      allow list: if isAuthenticated() && (isMaster() || (request.query.limit <= 100 && request.query.filters.userId == request.auth.uid));
+      allow list: if isAuthenticated() && (isMaster() || (request.query.filters.userId == request.auth.uid));
       
       allow create: if isApproved() && isValidETP(request.resource.data) && 
                     request.resource.data.userId == request.auth.uid;

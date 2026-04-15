@@ -14,7 +14,7 @@ import JoditEditor from 'jodit-react';
 
 import { auth, db, googleProvider, OperationType, handleFirestoreError } from "./firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { collection, query, where, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, getDoc, addDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, getDoc, addDoc, limit, getDocs } from "firebase/firestore";
 
 const SYSTEM_PROMPT = `Você é um Especialista em Contratações Públicas da Câmara Municipal de Curitiba (CMC), com profundo conhecimento da Lei 14.133/2021.
 Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP) seguindo RIGOROSAMENTE as diretrizes abaixo:
@@ -502,6 +502,8 @@ export default function App() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showGlobalConfirm, setShowGlobalConfirm] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [userToDelete, setUserToDelete] = useState<any | null>(null);
+  const [confirmDeleteCheckbox, setConfirmDeleteCheckbox] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [examplePopup, setExamplePopup] = useState<{ fieldId: string, examples: ETPExample[] } | null>(null);
@@ -624,9 +626,9 @@ export default function App() {
 
     let q;
     if (userRole === 'master' && view === 'admin') {
-      q = query(collection(db, 'etps'));
+      q = query(collection(db, 'etps'), limit(100));
     } else {
-      q = query(collection(db, 'etps'), where('userId', '==', user.uid));
+      q = query(collection(db, 'etps'), where('userId', '==', user.uid), limit(100));
     }
 
     return onSnapshot(q, (snapshot) => {
@@ -802,6 +804,79 @@ export default function App() {
     } catch (err: any) {
       handleFirestoreError(err, OperationType.UPDATE, 'users');
     }
+  };
+
+  const deleteUser = async (uid: string) => {
+    if (uid === user?.uid) {
+      setApiError("Você não pode excluir seu próprio usuário.");
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, 'users', uid));
+      setUserToDelete(null);
+      setConfirmDeleteCheckbox(false);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.DELETE, 'users');
+    }
+  };
+
+  const exportBackup = async () => {
+    if (userRole !== 'master') return;
+    
+    setIsSaving(true);
+    setApiError(null);
+    
+    try {
+      // Fetch ALL ETPs (including those not in current state)
+      const etpsSnap = await getDocs(query(collection(db, 'etps'), limit(500)));
+      const allEtps = etpsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Fetch ALL Users
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const allUsersData = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const backupData = {
+        version: 2,
+        exportDate: new Date().toISOString(),
+        drafts: allEtps,
+        users: allUsersData
+      };
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      saveAs(blob, `ETP_DIGITAL_FULL_BACKUP_${new Date().toISOString().split('T')[0]}.json`);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.LIST, 'backup');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const importBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const backup = JSON.parse(event.target?.result as string);
+        if (!backup.drafts || !Array.isArray(backup.drafts)) {
+          throw new Error("Formato de backup inválido.");
+        }
+
+        const confirm = window.confirm(`Deseja importar ${backup.drafts.length} ETPs? Isso pode sobrescrever documentos com o mesmo ID.`);
+        if (!confirm) return;
+
+        for (const draft of backup.drafts) {
+          const { id, ...data } = draft;
+          await setDoc(doc(db, 'etps', id), data);
+        }
+        
+        alert("Backup importado com sucesso!");
+      } catch (err: any) {
+        setApiError("Erro ao importar backup: " + err.message);
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleAiAssist = async (fieldId: ETPField) => {
@@ -1453,6 +1528,54 @@ export default function App() {
         </div>
       )}
 
+      {userToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200"
+          >
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 mb-6">
+              <Icon name="AlertTriangle" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Excluir Usuário?</h3>
+            <p className="text-slate-500 text-sm leading-relaxed mb-6">
+              Você está prestes a excluir permanentemente o usuário <span className="font-bold text-slate-900">{userToDelete.email}</span>. Esta ação não pode ser desfeita.
+            </p>
+            
+            <label className="flex items-center gap-3 p-4 bg-red-50 rounded-2xl border border-red-100 mb-8 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                checked={confirmDeleteCheckbox}
+                onChange={(e) => setConfirmDeleteCheckbox(e.target.checked)}
+                className="w-5 h-5 rounded border-red-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-xs font-bold text-red-700 uppercase tracking-tight">Tenho certeza</span>
+            </label>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => {
+                  setUserToDelete(null);
+                  setConfirmDeleteCheckbox(false);
+                }}
+                className="flex-1 px-6 py-3 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={!confirmDeleteCheckbox}
+                onClick={() => deleteUser(userToDelete.uid)}
+                className={`flex-1 px-6 py-3 rounded-xl text-xs font-bold text-white transition-all shadow-lg ${confirmDeleteCheckbox ? 'bg-red-600 hover:bg-red-700 shadow-red-200' : 'bg-slate-300 cursor-not-allowed shadow-none'}`}
+              >
+                Sim, Excluir
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {showClearConfirm && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div 
@@ -1617,17 +1740,29 @@ export default function App() {
         </div>
         <div className="flex gap-3">
           {userRole === 'master' && (
-            <button 
-              onClick={() => setView('admin')}
-              className="relative bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all"
-            >
-              <Icon name="ShieldCheck" size={18} /> Painel Master
-              {pendingUsersCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
-                  {pendingUsersCount}
-                </span>
-              )}
-            </button>
+            <div className="flex gap-2">
+              <label className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all cursor-pointer">
+                <Icon name="Download" size={16} className="rotate-180" /> Importar Backup
+                <input type="file" className="hidden" accept=".json" onChange={importBackup} />
+              </label>
+              <button 
+                onClick={exportBackup}
+                className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
+              >
+                <Icon name="Download" size={16} /> Exportar Backup
+              </button>
+              <button 
+                onClick={() => setView('admin')}
+                className="relative bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all"
+              >
+                <Icon name="ShieldCheck" size={18} /> Painel Master
+                {pendingUsersCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
+                    {pendingUsersCount}
+                  </span>
+                )}
+              </button>
+            </div>
           )}
           <button 
             onClick={createNewETP}
@@ -1838,6 +1973,13 @@ export default function App() {
                           Reativar
                         </button>
                       )}
+                      <button 
+                        onClick={() => setUserToDelete(u)}
+                        className="p-2 text-slate-300 hover:text-red-600 transition-colors"
+                        title="Excluir Usuário Permanentemente"
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
