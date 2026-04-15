@@ -512,6 +512,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'diagnostic' | 'technical'>('diagnostic');
   const [expandedSections, setExpandedSections] = useState<string[]>(['0. DIAGNÓSTICO INICIAL', 'I - INFORMAÇÕES GERAIS', 'II - DEMANDA E PROSPECÇÃO DE SOLUÇÕES', 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 'IV - ANÁLISE DE RISCOS E CONCLUSÃO']);
   const [isAdminViewing, setIsAdminViewing] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ current: number, total: number, type: 'ETPs' | 'Usuários' } | null>(null);
+  const [backupToImport, setBackupToImport] = useState<any | null>(null);
   const [etpSort, setEtpSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
   const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
 
@@ -913,30 +915,104 @@ export default function App() {
 
   const importBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log("Nenhum arquivo selecionado");
+      return;
+    }
 
+    setApiError("Lendo arquivo de backup...");
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const backup = JSON.parse(event.target?.result as string);
-        if (!backup.drafts || !Array.isArray(backup.drafts)) {
-          throw new Error("Formato de backup inválido.");
-        }
-
-        const confirm = window.confirm(`Deseja importar ${backup.drafts.length} ETPs? Isso pode sobrescrever documentos com o mesmo ID.`);
-        if (!confirm) return;
-
-        for (const draft of backup.drafts) {
-          const { id, ...data } = draft;
-          await setDoc(doc(db, 'etps', id), data);
-        }
+        const content = event.target?.result as string;
+        if (!content) throw new Error("O arquivo selecionado está vazio.");
         
-        alert("Backup importado com sucesso!");
+        const backup = JSON.parse(content);
+        if (!backup.drafts || !Array.isArray(backup.drafts)) {
+          throw new Error("O arquivo não parece ser um backup válido do ETP Digital (lista de documentos não encontrada).");
+        }
+
+        setBackupToImport(backup);
       } catch (err: any) {
-        setApiError("Erro ao importar backup: " + err.message);
+        console.error("Erro na leitura do arquivo:", err);
+        setApiError("Erro ao ler arquivo: " + (err.message || "Erro desconhecido"));
+      } finally {
+        e.target.value = '';
       }
     };
     reader.readAsText(file);
+  };
+
+  const confirmImportBackup = async () => {
+    if (!backupToImport) return;
+    
+    setIsSaving(true);
+    setBackupToImport(null);
+    setApiError(null);
+    
+    try {
+      // Import Users
+      let userCount = 0;
+        if (backupToImport.users && Array.isArray(backupToImport.users)) {
+          const totalUsers = backupToImport.users.length;
+          for (let i = 0; i < totalUsers; i++) {
+            const u = backupToImport.users[i];
+            setImportProgress({ current: i + 1, total: totalUsers, type: 'Usuários' });
+            
+            const targetUid = u.uid || u.id;
+            if (targetUid) {
+              const cleanUserData = { 
+                ...u,
+                uid: targetUid // Ensure uid is present in the document data
+              };
+              // Remove 'id' if it exists as a top-level field from old backups
+              if ('id' in cleanUserData) delete (cleanUserData as any).id;
+              
+              if (cleanUserData.lastActive) cleanUserData.lastActive = serverTimestamp();
+              if (cleanUserData.createdAt) cleanUserData.createdAt = serverTimestamp();
+              
+              try {
+                await setDoc(doc(db, 'users', targetUid), cleanUserData);
+                userCount++;
+              } catch (e: any) {
+                console.error(`Erro ao importar usuário ${targetUid}:`, e);
+                throw new Error(`Falha no usuário ${cleanUserData.email || targetUid}: ${e.message}`);
+              }
+            }
+          }
+        }
+
+      // Import ETPs
+      let etpCount = 0;
+      const totalEtps = backupToImport.drafts.length;
+      for (let i = 0; i < totalEtps; i++) {
+        const draft = backupToImport.drafts[i];
+        setImportProgress({ current: i + 1, total: totalEtps, type: 'ETPs' });
+        const { id, ...data } = draft;
+        const cleanData = { ...data };
+        if (cleanData.createdAt) cleanData.createdAt = serverTimestamp();
+        if (cleanData.updatedAt) cleanData.updatedAt = serverTimestamp();
+        if (cleanData.deletedAt) cleanData.deletedAt = serverTimestamp();
+        
+        try {
+          await setDoc(doc(db, 'etps', id), cleanData);
+          etpCount++;
+        } catch (e: any) {
+          console.error(`Erro ao importar ETP ID ${id}:`, e);
+          throw new Error(`Falha no ETP "${cleanData.title || id}": ${e.message}`);
+        }
+      }
+      
+      setImportProgress(null);
+      alert(`Sucesso! ${etpCount} ETPs e ${userCount} usuários restaurados.`);
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Erro na importação:", err);
+      setApiError("Erro ao importar backup: " + (err.message || "Erro desconhecido"));
+      setImportProgress(null);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAiAssist = async (fieldId: ETPField) => {
@@ -1674,6 +1750,72 @@ export default function App() {
         </div>
       )}
 
+      {/* Backup Import Confirmation Modal */}
+      {backupToImport && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-8 rounded-[32px] shadow-2xl max-w-md w-full"
+          >
+            <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-amber-100">
+              <Icon name="Download" size={32} className="rotate-180" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 mb-2">Confirmar Restauração</h3>
+            <p className="text-slate-500 mb-8 leading-relaxed">
+              O arquivo contém <strong>{backupToImport.drafts.length} ETPs</strong> e <strong>{backupToImport.users?.length || 0} usuários</strong>. 
+              Deseja prosseguir com a importação? Dados existentes com o mesmo ID serão sobrescritos.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setBackupToImport(null)}
+                className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmImportBackup}
+                className="flex-2 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+              >
+                Confirmar Importação
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Global Loading Overlay */}
+      {(isSaving || importProgress) && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center"
+          >
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-100">
+              <Icon name="Loader2" size={32} className="animate-spin" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">
+              {importProgress ? `Restaurando ${importProgress.type}` : "Processando..."}
+            </h3>
+            <p className="text-slate-500 text-sm mb-6">
+              {importProgress 
+                ? `Por favor, aguarde. Importando item ${importProgress.current} de ${importProgress.total}.`
+                : "Estamos sincronizando as informações com o banco de dados."}
+            </p>
+            {importProgress && (
+              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <motion.div 
+                  className="bg-indigo-600 h-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                />
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+
       {helpPopup && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div 
@@ -1893,6 +2035,20 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      {apiError && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600"
+        >
+          <Icon name="AlertTriangle" size={20} />
+          <p className="text-sm font-bold">{apiError}</p>
+          <button onClick={() => setApiError(null)} className="ml-auto p-1 hover:bg-red-100 rounded-lg">
+            <Icon name="X" size={16} />
+          </button>
+        </motion.div>
+      )}
 
       <div className="flex gap-1 mb-8 bg-slate-100 p-1 rounded-2xl w-fit">
         <button 
