@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useMemo } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -512,6 +512,66 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'diagnostic' | 'technical'>('diagnostic');
   const [expandedSections, setExpandedSections] = useState<string[]>(['0. DIAGNÓSTICO INICIAL', 'I - INFORMAÇÕES GERAIS', 'II - DEMANDA E PROSPECÇÃO DE SOLUÇÕES', 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 'IV - ANÁLISE DE RISCOS E CONCLUSÃO']);
   const [isAdminViewing, setIsAdminViewing] = useState(false);
+  const [etpSort, setEtpSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
+  const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
+
+  const sortedDrafts = useMemo(() => {
+    const sorted = [...drafts].sort((a, b) => {
+      let aValue = a[etpSort.key];
+      let bValue = b[etpSort.key];
+
+      // Handle Firebase Timestamps
+      if (aValue?.toDate) aValue = aValue.toDate().getTime();
+      if (bValue?.toDate) bValue = bValue.toDate().getTime();
+
+      if (aValue < bValue) return etpSort.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return etpSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [drafts, etpSort]);
+
+  const sortedUsers = useMemo(() => {
+    const sorted = [...allUsers].sort((a, b) => {
+      let aValue = a[userSort.key];
+      let bValue = b[userSort.key];
+
+      if (aValue < bValue) return userSort.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return userSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [allUsers, userSort]);
+
+  const sortedTrash = useMemo(() => {
+    const sorted = [...trashDrafts].sort((a, b) => {
+      let aValue = a[etpSort.key];
+      let bValue = b[etpSort.key];
+
+      // Handle Firebase Timestamps
+      if (aValue?.toDate) aValue = aValue.toDate().getTime();
+      if (bValue?.toDate) bValue = bValue.toDate().getTime();
+
+      if (aValue < bValue) return etpSort.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return etpSort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [trashDrafts, etpSort]);
+
+  const toggleEtpSort = (key: string) => {
+    setEtpSort(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const toggleUserSort = (key: string) => {
+    setUserSort(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -1740,29 +1800,17 @@ export default function App() {
         </div>
         <div className="flex gap-3">
           {userRole === 'master' && (
-            <div className="flex gap-2">
-              <label className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all cursor-pointer">
-                <Icon name="Download" size={16} className="rotate-180" /> Importar Backup
-                <input type="file" className="hidden" accept=".json" onChange={importBackup} />
-              </label>
-              <button 
-                onClick={exportBackup}
-                className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
-              >
-                <Icon name="Download" size={16} /> Exportar Backup
-              </button>
-              <button 
-                onClick={() => setView('admin')}
-                className="relative bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all"
-              >
-                <Icon name="ShieldCheck" size={18} /> Painel Master
-                {pendingUsersCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
-                    {pendingUsersCount}
-                  </span>
-                )}
-              </button>
-            </div>
+            <button 
+              onClick={() => setView('admin')}
+              className="relative bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all"
+            >
+              <Icon name="ShieldCheck" size={18} /> Painel Master
+              {pendingUsersCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
+                  {pendingUsersCount}
+                </span>
+              )}
+            </button>
           )}
           <button 
             onClick={createNewETP}
@@ -1826,12 +1874,24 @@ export default function App() {
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Painel Master</h2>
           <p className="text-slate-500">Visualização global de todos os ETPs e usuários da Câmara.</p>
         </div>
-        <button 
-          onClick={() => setView('dashboard')}
-          className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-all"
-        >
-          <Icon name="ChevronDown" size={18} className="rotate-90" /> Voltar
-        </button>
+        <div className="flex gap-3">
+          <label className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all cursor-pointer">
+            <Icon name="Download" size={16} className="rotate-180" /> Importar Backup
+            <input type="file" className="hidden" accept=".json" onChange={importBackup} />
+          </label>
+          <button 
+            onClick={exportBackup}
+            className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
+          >
+            <Icon name="Download" size={16} /> Exportar Backup
+          </button>
+          <button 
+            onClick={() => setView('dashboard')}
+            className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-all"
+          >
+            <Icon name="ChevronDown" size={18} className="rotate-90" /> Voltar
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1 mb-8 bg-slate-100 p-1 rounded-2xl w-fit">
@@ -1860,14 +1920,44 @@ export default function App() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Título / Objeto</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Autor</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleEtpSort('title')}
+                >
+                  <div className="flex items-center gap-2">
+                    Título / Objeto
+                    {etpSort.key === 'title' && (
+                      <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleEtpSort('userEmail')}
+                >
+                  <div className="flex items-center gap-2">
+                    Autor
+                    {etpSort.key === 'userEmail' && (
+                      <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleEtpSort('updatedAt')}
+                >
+                  <div className="flex items-center gap-2">
+                    Data / Hora
+                    {etpSort.key === 'updatedAt' && (
+                      <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {drafts.map(draft => (
+              {sortedDrafts.map(draft => (
                 <tr key={draft.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-900">{draft.title}</div>
@@ -1877,7 +1967,12 @@ export default function App() {
                     <div className="text-sm text-slate-600">{draft.userEmail}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-slate-600">{draft.updatedAt?.toDate().toLocaleDateString('pt-BR')}</div>
+                    <div className="text-sm text-slate-600">
+                      {draft.updatedAt?.toDate().toLocaleDateString('pt-BR')}
+                      <span className="ml-2 text-[10px] text-slate-400">
+                        {draft.updatedAt?.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
@@ -1900,14 +1995,44 @@ export default function App() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome / E-mail</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo</th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleUserSort('displayName')}
+                >
+                  <div className="flex items-center gap-2">
+                    Nome / E-mail
+                    {userSort.key === 'displayName' && (
+                      <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleUserSort('status')}
+                >
+                  <div className="flex items-center gap-2">
+                    Status
+                    {userSort.key === 'status' && (
+                      <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleUserSort('role')}
+                >
+                  <div className="flex items-center gap-2">
+                    Cargo
+                    {userSort.key === 'role' && (
+                      <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {allUsers.map(u => {
+              {sortedUsers.map(u => {
                 const isOnline = u.lastActive && (Date.now() - u.lastActive.toMillis() < 300000); // 5 minutes threshold
                 
                 return (
@@ -1993,21 +2118,51 @@ export default function App() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Título / Objeto</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Excluído por</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tempo Restante</th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleEtpSort('title')}
+                >
+                  <div className="flex items-center gap-2">
+                    Título / Objeto
+                    {etpSort.key === 'title' && (
+                      <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleEtpSort('userEmail')}
+                >
+                  <div className="flex items-center gap-2">
+                    Excluído por
+                    {etpSort.key === 'userEmail' && (
+                      <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleEtpSort('deletedAt')}
+                >
+                  <div className="flex items-center gap-2">
+                    Tempo Restante
+                    {etpSort.key === 'deletedAt' && (
+                      <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                    )}
+                  </div>
+                </th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {trashDrafts.length === 0 ? (
+              {sortedTrash.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-bold italic">
                     Lixeira vazia.
                   </td>
                 </tr>
               ) : (
-                trashDrafts.map(draft => {
+                sortedTrash.map(draft => {
                   const deletedAt = draft.deletedAt?.toDate().getTime() || 0;
                   const timeLeft = Math.max(0, 24 * 60 * 60 * 1000 - (Date.now() - deletedAt));
                   const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
