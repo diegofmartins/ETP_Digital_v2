@@ -22,6 +22,7 @@ export interface ETPData {
   requisitos_exigencias: string;
   requisitos_qualidade: string;
   requisitos_marca: string;
+  requisitos_continuos: string;
   requisitos_amostra: string;
   requisitos_transicao: string;
   garantia_contratual: string;
@@ -46,6 +47,7 @@ export interface ETPData {
   tabela_riscos_externa: string;
   fotos: string;
   assinaturas: string;
+  _version?: number;
 }
 
 export type ETPField = keyof ETPData;

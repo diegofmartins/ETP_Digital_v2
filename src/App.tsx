@@ -23,9 +23,10 @@ Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP
 2. LEVANTAMENTO DE MERCADO: Não pesquise apenas preços. Analise modelos de contratação, tecnologias e abordagens. Considere o custo-benefício e o ciclo de vida.
 3. DESCRIÇÃO DA SOLUÇÃO: Detalhe a solução escolhida considerando todo o ciclo de vida (entrega, instalação, manutenção, descarte).
 4. REQUISITOS: Devem ser essenciais e não restritivos. Garanta qualidade, desempenho e segurança.
-5. ALINHAMENTO: Mencione o "Planejamento Estratégico 2022-2031" e o "Plano de Contratações Anual (PCA)" APENAS na seção específica de Alinhamento ao Planejamento. Evite repetir essa informação em outras seções.
-6. LINGUAGEM: Formal, técnica, EXTREMAMENTE concisa e objetiva. Evite textos longos, redundantes ou prolixos.
-7. FORMATAÇÃO E REGRAS DE ESCRITA:
+5. CARACTERIZAÇÃO DE SERVIÇOS OU FORNECIMENTOS CONTÍNUOS (Item 6.3): Determine se o objeto é de natureza contínua (auxiliares e necessários à Administração, que se interrompidos comprometem atividades essenciais e estendem-se por mais de um exercício). Exemplos: vigilância, limpeza, manutenção elétrica/elevadores/veículos.
+6. ALINHAMENTO: Mencione o "Planejamento Estratégico 2022-2031" e o "Plano de Contratações Anual (PCA)" APENAS na seção específica de Alinhamento ao Planejamento. Evite repetir essa informação em outras seções.
+7. LINGUAGEM: Formal, técnica, EXTREMAMENTE concisa e objetiva. Evite textos longos, redundantes ou prolixos.
+8. FORMATAÇÃO E REGRAS DE ESCRITA:
    - NÃO use markdown (não use # para títulos, não use * ou ** para negrito/itálico).
    - NÃO inclua introduções, saudações ou comentários.
    - NÃO repita as mesmas frases ou justificativas em múltiplos campos.
@@ -33,7 +34,7 @@ Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP
    - Use listas com hífens (-) para clareza quando necessário.
    - Utilize os dados de DIAGNÓSTICO INICIAL para fundamentar todas as seções.
 
-8. REGRA DE EXCLUSÃO:
+9. REGRA DE EXCLUSÃO:
    - NUNCA gere conteúdo para o campo "assinaturas" (Assinaturas). Este campo deve permanecer vazio para preenchimento manual do usuário.
 
 REGRA CRÍTICA DE PREENCHIMENTO:
@@ -213,7 +214,7 @@ const structure: ETPStructureItem[] = [
     icon: 'Layout', 
     section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
     isAiEnabled: true,
-    helpText: 'Uma solução é o conjunto de todos os elementos (bens, serviços e outros) necessários para, de forma integrada, gerar os resultados que atendam à necessidade. Devem ser descritos todos os elementos a se produzir/contratar/executar para que a contratação produza os resultados pretendidos. Esta descrição deve considerar todo o "ciclo de vida" do produto ou serviço: como ele será entregue ou instalado, como será sua manutenção, os custos durante o uso e como será seu descarte ou encerramento ao final do contrato. Deve-se detalhar a integração entre os diversos componentes da solução e como eles contribuem para a resolução do problema identificado.'
+    helpText: 'Uma solução é o conjunto de todos os elementos (bens, serviços e outros) necessários para, de forma integrada, gerar os resultados que atendam à necessidade que ocasionou a contratação. Devem ser descritos todos os elementos a se produzir/contratar/executar para que a contratação produza, de fato, os resultados pretendidos pela Administração e atinja, de forma satisfatória, o escopo previamente eleito, com apresentação, quando for o caso, das justificativas técnicas e econômicas do tipo de solução escolhida.\nApós analisar as opções no "Levantamento de Mercado", aqui será descrito em detalhes a solução que foi escolhida. É como se, depois de pesquisar vários carros, você decidisse por um modelo específico e agora fosse descrever todas as suas características: o motor, os itens de série, o plano de revisões e até como ele será descartado no futuro.\nEsta descrição deve considerar todo o "ciclo de vida" do produto ou serviço: como ele será entregue ou instalado, como será sua manutenção, os custos durante o uso e como será seu descarte ou encerramento ao final do contrato.\nEm caso de exigências de qualificação técnica ou econômica:\n    • Necessitam ser específicas e objetivas;\n    • Devem ser justificadas neste tópico;\n    • Caso refiram-se a contratações para: a) entrega imediata, ou, b) contratações com valores inferiores a um quarto do limite para dispensa de licitação para compras em geral, é preciso justificar porque não foram dispensadas as exigências de qualificação técnica ou econômica.\nCaso após o levantamento de mercado a quantidade de fornecedores for considerada restrita, deve-se verificar se os requisitos que limitam a participação são realmente indispensáveis, flexibilizando-os sempre que possível.\nNo caso de serviços com contratação simultânea para o mesmo objeto, caso a Administração pretenda contratar mais de uma empresa para execução do objeto, é necessário atestar ainda que:\n    • Não houve perda da economia de escala;\n    • É possível e conveniente a execução simultânea;\n    • Há controle individualizado para execução de cada contratado (conforme art. 49 da Lei nº 14.133/2021).\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).'
   },
   { 
     id: 'requisitos_header', 
@@ -222,20 +223,112 @@ const structure: ETPStructureItem[] = [
     section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
     isAiEnabled: false,
     placeholder: 'Campo informativo ou observações gerais sobre os requisitos.',
-    helpText: 'São os elementos necessários ao objeto a ser contratado, para que atenda adequadamente à necessidade que originou a contratação. O objetivo é garantir a qualidade, o desempenho, a segurança e a padronização do que será contratado. É crucial que essas exigências sejam essenciais para atender à necessidade e não restrinjam indevidamente a competição. Os requisitos podem ser técnicos, operacionais, de manutenção, de segurança, de sustentabilidade, entre outros. Devem ser definidos de forma a permitir a mensuração da conformidade da solução entregue.'
+    helpText: 'São os elementos necessários ao objeto a ser contratado, para que atenda adequadamente à necessidade que originou a contratação.\nSe a "Descrição da Necessidade" é o "problema", os "Requisitos da Contratação" são a "lista de regras e exigências mínimas" que a solução (seja um produto ou serviço) deve obrigatoriamente cumprir para ser considerada aceitável pela CMC. O objetivo é garantir a qualidade, o desempenho, a segurança e a padronização do que será contratado. É crucial que essas exigências sejam essenciais para atender à necessidade e não restrinjam indevidamente a competição a um único fornecedor.\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).'
   },
-  { id: 'requisitos_exigencias', label: '6.1. Exigências Internas e Externas à CMC', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Considerar as exigências internas da CMC (segurança da informação, proteção de dados pessoais, gestão documental, gestão de riscos) e exigências externas (requisitos legais, infralegais e regulatórios, aderência a normas técnicas, de saúde e de segurança do trabalho). Devem ser listadas as normas, leis e regulamentos específicos que a contratada deve observar durante a execução do objeto.' },
-  { id: 'requisitos_qualidade', label: '6.2. Padrões de Qualidade Exigidos', icon: 'CheckCircle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Definir os padrões de qualidade a serem exigidos na execução do objeto, os quais não devem exceder o necessário para atender à necessidade. Vale lembrar que mesmo contratações pelo MENOR PREÇO devem estabelecer requisitos mínimos de qualidade. Os padrões podem incluir certificações, normas ABNT, ISO, ou outros critérios objetivos de avaliação da qualidade do produto ou serviço.' },
-  { id: 'requisitos_marca', label: '6.2.1. Marca de Referência', icon: 'Target', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar marcas de referência, se for o caso, seguidas das expressões "equivalente/similar ou de melhor qualidade". As marcas são utilizadas unicamente como referência de qualidade para definir as características mínimas de desempenho e durabilidade desejadas. O uso de marcas deve ser justificado tecnicamente, demonstrando que a referência é necessária para a correta compreensão dos requisitos de qualidade.' },
-  { id: 'requisitos_amostra', label: '6.3. Exigência de Amostra ou Prova de Conceito (POC)', icon: 'Eye', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'A Administração poderá solicitar amostras, exames de conformidade ou provas de conceito (POC) para avaliar a conformidade do objeto. Tais medidas possuem caráter excepcional e devem ser justificadas formalmente, pois podem restringir a competição. Deve-se definir claramente os critérios de avaliação e os prazos para apresentação e análise das amostras ou realização da POC.' },
-  { id: 'requisitos_transicao', label: '6.4. Necessidade de transição contratual', icon: 'Zap', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Informar se há necessidade de transição contratual com transferência de conhecimento, tecnologia e técnicas empregadas, capacitação dos técnicos do contratante ou do novo contratado. Deve-se descrever o plano de transição, incluindo cronograma, responsabilidades e os recursos necessários para garantir a continuidade dos serviços sem perda de qualidade ou segurança.' },
-  { id: 'garantia_contratual', label: '6.5.1. Garantia de Execução do Objeto (Garantia Contratual)', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar se é necessária a exigência de garantia para a execução do objeto (5% em geral / 10% para alta complexidade). A decisão de não exigir garantia também deve ser acompanhada de justificativa técnica ou econômica explícita. A garantia visa assegurar o cumprimento das obrigações contratuais e a reparação de eventuais danos causados pela contratada.' },
-  { id: 'garantia_tecnica', label: '6.5.2. Garantia Técnica (Garantia do Produto/Serviço)', icon: 'ShieldCheck', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'A Contratada deverá fornecer garantia integral contra vícios e defeitos de fabricação. Indicar o prazo mínimo em dias ou conforme o Código de Defesa do Consumidor, prevalecendo o que for maior. Deve-se detalhar a abrangência da garantia, os prazos de atendimento e as condições para sua fruição.' },
-  { id: 'assistencia_tecnica', label: '6.5.3. Exigências de manutenção e assistência técnica', icon: 'Settings', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'As exigências de manutenção e assistência devem contemplar a definição do local de realização dos serviços e se há necessidade de deslocamento de técnico ou unidade local. Devem ser definidos os níveis de serviço (SLA), tempos de resposta e de solução de problemas, bem como a disponibilidade de peças e suporte técnico.' },
-  { id: 'requisitos_vistoria', label: '6.6. Necessidade de Vistoria', icon: 'Eye', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Informar se haverá necessidade de vistoria técnica, agendada com antecedência mínima. Indicar a diretoria/servidor de contato, e-mail, telefone e endereço. A vistoria deve ser facultativa, salvo se tecnicamente indispensável, e deve ser garantida a igualdade de condições a todos os interessados.' },
-  { id: 'requisitos_subcontratacao', label: '6.7. Subcontratação', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar se será admitida a subcontratação (parcial) e qual o percentual permitido (máximo 25%). A subcontratação integral é vedada. Deve ser prévia e expressamente autorizada. A contratada principal permanece integralmente responsável pela execução do objeto e pela qualidade dos serviços prestados pelas subcontratadas.' },
-  { id: 'requisitos_execucao', label: '6.8. Execução do Objeto', icon: 'Zap', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Definir como o contrato deverá produzir os resultados: prazo para início, prazos de entrega (provisória e definitiva), descrição detalhada de métodos, rotinas, tecnologias, frequência, forma de comunicação, localidade e horário de funcionamento. Devem ser estabelecidos marcos de entrega e critérios de aceitação para cada etapa da execução.' },
-  { id: 'requisitos_dimensionamento', label: '6.9. Informações Importantes para o Dimensionamento da Proposta', icon: 'BarChart', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Informar detalhadamente sobre o ambiente e condições gerais de execução: estrutura disponível, restrições de acesso, parcelas às expensas da contratada, etc. Tais informações são cruciais para que os licitantes possam elaborar propostas realistas e competitivas, evitando sobrepreços por incertezas.' },
+  { 
+    id: 'requisitos_exigencias', 
+    label: '6.1. Exigências Internas e Externas à CMC', 
+    icon: 'ShieldCheck', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Considerar as exigências internas da CMC que estejam relacionadas à execução do objeto, como, por exemplo, a segurança da informação, a proteção de dados pessoais, gestão documental, gestão de riscos.\nConsiderar as exigências externas à organização, como requisitos legais, infralegais e regulatórios, como, por exemplo, aderência a normas técnicas, de saúde e de segurança do trabalho.' 
+  },
+  { 
+    id: 'requisitos_qualidade', 
+    label: '6.2. Padrões de Qualidade Exigidos', 
+    icon: 'CheckCircle', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Definir os padrões de qualidade a serem exigidos na execução do objeto, os quais não devem exceder o necessário para atender à necessidade que originou a contratação.\nVale lembrar que as contratações que utilizarão o MENOR PREÇO como critério de julgamento também deverão estabelecer requisitos mínimos de qualidade.\nSe o ETP demonstrar que a avaliação e a ponderação da qualidade técnica das propostas que superarem os requisitos mínimos de qualidade são relevantes aos fins pretendidos pela Administração, poderá ser escolhido o critério de julgamento por TÉCNICA E PREÇO para a seleção do fornecedor nas contratações de objetos listados nos incisos I a V do § 1º do art. 36 da Lei nº 14.133/2021.' 
+  },
+  { 
+    id: 'requisitos_marca', 
+    label: '6.2.1. Marca de Referência', 
+    icon: 'Target', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Indicar quais são as marcas de referência dos respectivos itens, se for o caso, seguida das expressões “equivalente/similar ou de melhor qualidade”. Com fundamento no art. 41, I, “d” da Lei nº 14.133/2021, as marcas citadas são utilizadas unicamente como referência de qualidade para definir as características mínimas de desempenho e durabilidade desejadas. Tal indicação serve para facilitar a exata compreensão do objeto, sendo permitida a oferta de produtos de outras marcas, desde que possuam qualidade similar, equivalente ou superior, o que garante a ampla competitividade do certame.\n\nExcepcionalmente será permitida a indicação de uma ou mais marcas ou modelos, desde que justificada tecnicamente no processo, nas hipóteses descritas no art. 41, inciso I, alíneas a, b, c e d da Lei nº 14.133, de 2021.\nSimilaridade: Quando necessária a indicação de marca como referência de qualidade ou facilitação da descrição do objeto, ela deverá ser seguida das expressões “ou equivalente”, “ou similar” e “ou de melhor qualidade”, hipótese em que a Administração poderá exigir que o interessado comprove desempenho, qualidade e produtividade compatíveis com o produto similar ou equivalente à marca de referência mencionada, por meio dos procedimentos de prova de qualidade estabelecidos no art. 42 da Lei nº 14.133, de 2021.' 
+  },
+  { 
+    id: 'requisitos_continuos', 
+    label: '6.3. Caracterização de Serviços ou Fornecimentos Contínuos', 
+    icon: 'ClipboardList', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Determinar se o objeto em questão é de natureza contínua ou não. Serviços de natureza contínua são serviços auxiliares e necessários à Administração no desempenho das respectivas atribuições. São aqueles que, se interrompidos, podem comprometer a continuidade de atividades essenciais e cuja contratação deva estender-se por mais de um exercício financeiro.\nSão exemplos de serviços de natureza contínua: vigilância, limpeza e conservação, manutenção elétrica, manutenção de elevadores, manutenção de veículos etc.' 
+  },
+  { 
+    id: 'requisitos_amostra', 
+    label: '6.4. Exigência de Amostra ou Prova de Conceito (POC)', 
+    icon: 'Eye', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'A Administração poderá solicitar do licitante provisoriamente vencedor a apresentação de amostras, a realização de exames de conformidade ou de provas de conceito, entre outros testes, para avaliar a conformidade do objeto ofertado com as especificações técnicas e requisitos de qualidade, de desempenho e de funcionalidade.\nO objetivo de tais exigências é evitar a contratação de objetos inadequados ou até mesmo inservíveis, que representariam prejuízos aos cofres públicos.\nComo têm o potencial de restringir o universo de participantes na licitação, tais medidas possuem caráter excepcional, devendo ser justificadas formalmente, a fim de demonstrar que são, de fato, imprescindíveis para avaliar a qualidade, o desempenho ou a funcionalidade do objeto ofertado. Ademais, ressalte-se, poderão ser exigidas somente do licitante provisoriamente vencedor.\nCaso o licitante melhor colocado não apresente a amostra ou essa seja reprovada, sua proposta deverá ser desclassificada, devendo a Administração analisar a aceitabilidade da proposta do segundo colocado, procedendo a avaliação das suas amostras.\nA Administração também poderá utilizar um protótipo como parâmetro para demonstrar o objeto que pretende adquirir. Nesse caso, as amostras exigidas do licitante melhor colocado serão comparadas com o protótipo, podendo ser examinadas por instituição especializada.\n    • Exigência de Amostra: descrever quais os itens que deverão ser apresentadas as amostras; descrever os critérios objetivos para aceitação da amostra; determinar o prazo para sua apresentação; informar qual o local de recebimento da amostra e qual área irá acompanhar o seu recebimento; qual o e-mail e telefone para agendamento da entrega das amostras; quantos dias de antecedência é necessário para agendar a entrega da amostra; entre outras informações importantes.\n    • Prova de Conceito (POC): é um teste prático, realizado após a classificação provisória do licitante, para validar se a solução técnica proposta atende às exigências para a contratação antes da assinatura do contrato. Descrever detalhadamente o roteiro de como será a POC, incluindo o horário e local para sua realização; determinar quais os requisitos a serem avaliados; qual a % mínima em cada requisito que a licitante deve atingir para ser aprovada; informar qual estrutura/itens será disponibilizado pela CMC e qual deverá ser disponibilizado pela licitante; determinar o prazo para sua apresentação; qual o e-mail e telefone para agendamento da POC; quantos dias de antecedência é necessário para agendar a realização da POC; entre outras informações importantes.' 
+  },
+  { 
+    id: 'requisitos_transicao', 
+    label: '6.5. Necessidade de transição contratual', 
+    icon: 'Zap', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Informar se há necessidade de transição contratual com transferência de conhecimento, tecnologia e técnicas empregadas, capacitação dos técnicos do contratante ou do novo contratado.' 
+  },
+  { 
+    id: 'garantia_contratual', 
+    label: '6.6.1. Garantia de Execução do Objeto (Garantia Contratual)', 
+    icon: 'ShieldCheck', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Indicar se é necessário a exigência de garantia para a execução do objeto. Em caso positivo, justifique a necessidade da exigência da garantia e indique qual o % da garantia em razão do valor inicial do contrato (5% para contratações em geral / 10% nos casos de alta complexidade técnica e riscos envolvidos, caso em que deverá haver justificativa específica nos autos).\nNão cabe à Administração definir qual será a forma de garantia, mas apenas o seu percentual. A forma da garantia é uma escolha do contratado, podendo ser prestada por uma das seguintes modalidades: caução em dinheiro ou em títulos da dívida pública; seguro-garantia; ou fiança bancária.\nA decisão de não exigir garantia da contratação também deverá ser acompanhada de uma justificativa técnica ou econômica explícita, a qual diminua a vulnerabilidade da Administração em caso de inexecução ou danos.' 
+  },
+  { 
+    id: 'garantia_tecnica', 
+    label: '6.6.2. Garantia Técnica (Garantia do Produto/Serviço)', 
+    icon: 'ShieldCheck', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Importante destacar que esta não se confunde com a Garantia de Execução do Objeto (Garantia Contratual). Enquanto a garantia técnica se refere à necessidade de garantia do produto e assistência técnica pelo fabricante/fornecedor, a garantia contratual consiste em um percentual do valor do contrato que servirá de “caução” para assegurar a prestação do serviço ou fornecimento do produto, conforme regras e percentuais dos arts. 96 a 102 da Lei nº 14.133/21.' 
+  },
+  { 
+    id: 'assistencia_tecnica', 
+    label: '6.6.3. Exigências de manutenção e assistência técnica', 
+    icon: 'Settings', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'As exigências de manutenção e assistência devem contemplar a definição do local de realização dos serviços, se será admitida a exigência de deslocamento de técnico ao local ou se haverá a exigência de que o contratado tenha unidade de prestação de serviços em distância compatível com as necessidades da CMC.' 
+  },
+  { 
+    id: 'requisitos_vistoria', 
+    label: '6.7. Necessidade de Vistoria', 
+    icon: 'Eye', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Informar se haverá necessidade de realização de vistoria técnica; informar qual a diretoria/servidor que a empresa terá de contatar, e-mail, telefone e endereço.\nQuando a avaliação prévia do local de execução for imprescindível para o conhecimento pleno das condições e peculiaridades do objeto a ser contratado, o edital de licitação poderá prever, sob pena de inabilitação, a necessidade de o licitante atestar que conhece o local e as condições de realização da obra ou serviço, assegurado a ele o direito de realização de vistoria prévia.' 
+  },
+  { 
+    id: 'requisitos_subcontratacao', 
+    label: '6.8. Subcontratação', 
+    icon: 'Layout', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Informar se não será admitida a subcontratação do objeto contratual OU indicar o % mínimo e máximo do valor da contratação, informando quais as parcelas do objeto podem ser subcontratadas.\nNão exceder 25% de subcontratação para o objeto , conforme o Art. 122, inciso I, da Lei nº 14.133/2021.\nQualquer percentual ou parcela definida deve ser justificada técnica e economicamente no processo administrativo, demonstrando que a subcontratação é vantajosa e não restringe a competitividade.\nA subcontratação integral do objeto é vedada, alinhando-se à Lei nº 14.133/2021.\nDeixar claro que, mesmo com a autorização, a Contratada principal é a única responsável perante a Administração pela qualidade e integralidade dos serviços, e por quaisquer danos decorrentes da atuação da subcontratada.\nLei nº 14.133/2021: Art. 122: A Administração poderá prever no edital a possibilidade de subcontratação de partes ou de parcelas do objeto, desde que:\nI - não exceda o limite máximo de 25% (vinte e cinco por cento) do valor total do contrato;\nII - a subcontratada comprove os requisitos de habilitação;\nIII - a subcontratação seja justificada no processo de licitação;\nIV - o contratado mantenha a responsabilidade integral pela execução;\nV - a subcontratada seja aprovada pela Administração.\n(...)\n§ 2º: É vedada a subcontratação integral do objeto.' 
+  },
+  { 
+    id: 'requisitos_execucao', 
+    label: '6.9. Execução do Objeto', 
+    icon: 'Zap', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Consiste na definição de como o contrato deverá produzir os resultados pretendidos desde o seu início até o seu encerramento.\nDescrever a dinâmica do contrato, devendo ser observado, sempre que pertinente:\n    • Definição do prazo para início da execução do objeto, compatível com a necessidade, a natureza e a complexidade do objeto, atentando-se que o prazo mínimo previsto para início da prestação de serviços deverá ser o suficiente para possibilitar a preparação do prestador para o fiel cumprimento do contrato;\n    • Em caso de fornecimento, indicar qual o prazo para entrega PROVISÓRIA e DEFINITIVA do objeto; indicar qual o local e horário de entrega do objeto;\n    • . Em caso de serviço, indicar qual o prazo para iniciar o serviço;\n    • Descrição detalhada dos métodos, rotinas, tecnologias empregadas, procedimentos, frequência e periodicidade de execução do trabalho e das etapas a serem executadas;\n    • Indicar a forma de comunicação a ser utilizada para troca de informações entre a contratada e a administração;\n    • A localidade, o horário de funcionamento do órgão, dentre outros;\n    • A definição das rotinas da execução, a frequência e a periodicidade dos serviços, quando couber;\n    • Os procedimentos, metodologias e tecnologias a serem empregadas, quando for o caso;\n    • Os deveres e disciplina exigidos;\n    • O cronograma de realização dos serviços, incluídas todas as tarefas significativas e seus respectivos prazos;\n    • Demais especificações que se fizerem necessárias para a execução dos serviços.' 
+  },
+  { 
+    id: 'requisitos_dimensionamento', 
+    label: '6.10. Informações Importantes para o Dimensionamento da Proposta', 
+    icon: 'BarChart', 
+    section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 
+    isAiEnabled: true, 
+    helpText: 'Informar detalhadamente sobre o ambiente e condições gerais de execução do objeto, como, por exemplo, se tem estrutura disponível, se tem alguma restrição de acesso, se alguma parcela do objeto ficará às expensas da contratada, entre outras informações.' 
+  },
   { 
     id: 'estimativa_quantidades_texto', 
     label: '7. ESTIMATIVA DAS QUANTIDADES', 
@@ -245,7 +338,7 @@ const structure: ETPStructureItem[] = [
     isEssential: true,
     placeholder: 'Ex: 50 unidades baseadas no número de servidores novos.',
     instruction: 'Apresente a relação entre a demanda e o quantitativo.',
-    helpText: 'Apresentar a relação entre a demanda prevista e os quantitativos, com memórias de cálculo baseadas em dados concretos (ex: série histórica de consumo). O planejamento deve considerar o consumo anual provável. Deve-se justificar a metodologia utilizada para o cálculo das quantidades, demonstrando que elas são adequadas e suficientes para atender à necessidade identificada.'
+    helpText: 'Deve ser apresentada a relação entre a demanda prevista e os quantitativos a serem contratados, com as respectivas memórias de cálculo acompanhadas dos documentos que lhes dão suporte. A estimativa deve ser obtida a partir de dados concretos, como, por exemplo, série histórica de consumo, atentando-se a eventual fato futuro apto a impactar o quantitativo demandado.\nNo caso de obras, as quantidades que devem ser levantadas em nível de ETP são aquelas que possibilitarão e nortearão a futura elaboração do projeto básico ou anteprojeto e, ao mesmo tempo, viabilizarão estimativas de custo.\nEm relação às compras, o planejamento deverá considerar a expectativa de consumo anual e determinar (art. 40, inciso III): (...) as unidades e quantidades a serem adquiridas em função de consumo e utilização prováveis, cuja estimativa será obtida, sempre que possível, mediante adequadas técnicas quantitativas, admitido o fornecimento contínuo.\nQuanto aos serviços, deverá ser demonstrada a relação entre a demanda prevista e a quantidade de serviço a ser contratada. A Administração deverá definir um método para quantificar os volumes de serviços demandados.'
   },
   { 
     id: 'estimativa_valor_texto', 
@@ -256,7 +349,7 @@ const structure: ETPStructureItem[] = [
     isEssential: true,
     placeholder: 'Ex: R$ 250.000,00 baseado em pesquisa preliminar.',
     instruction: 'Indique o valor global estimado para a solução.',
-    helpText: 'Estimar o valor de cada solução para apoiar a análise de viabilidade e adequação orçamentária. Utilizar fontes diversificadas: contratações similares, mídia especializada, tabelas oficiais, sistemas de governo ou fornecedores. A estimativa deve ser fundamentada em preços de mercado atuais e deve considerar todos os custos diretos e indiretos envolvidos na execução do objeto.'
+    helpText: 'Para a comparação entre as diversas alternativas estudadas no ETP, a área demandante da contratação deve estimar o valor de cada solução.\nO objetivo dessa estimativa é apoiar a análise de viabilidade da contratação e avaliar a adequação das despesas futuras aos recursos disponíveis para a organização.\nNão é o objetivo principal, neste momento, definir o valor que constará do edital de licitação, mas sim possibilitar a escolha da solução mais vantajosa e o pronunciamento conclusivo sobre a viabilidade da contratação.\nApesar de ser um orçamento simplificado, para fins de análise de viabilidade econômica, é importante utilizar fontes diversificadas de pesquisa. Algumas fontes que podem ser usadas são:\n    • Contratações similares feitas pela Administração Pública;\n    • Dados de pesquisa publicada em mídia especializada;\n    • Tabelas de preços de referência fixados por órgão oficial;\n    • Sistemas oficiais de governo, como o catálogo eletrônico de padronização de compras, serviços e obras;\n    • Junto a fornecedores (essa é a fonte menos confiável de preços).\nAs memórias de cálculo dos preços unitários e do valor total devem ser incluídas, bem como os documentos que lhe dão suporte.\nAlém dos custos diretos para a obtenção da solução (preço de compra, entrega, instalação, seguros etc.), devem ser considerados, para a análise de viabilidade econômica, sempre que possível, os custos indiretos, relacionados ao ciclo de vida do objeto, a exemplo dos custos operacionais (como de consumo de energia, de combustível, de água, custos de peças de reposição e de manutenção, depreciação) e custos de fim de vida (desativação ou descarte final).'
   },
   { id: 'tabela_estimativa_quantitativos_precos', label: 'Tabela de Estimativa de Quantitativos e Preços', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Apresente uma tabela detalhada com os itens, especificações, quantidades e preços estimados. A tabela deve permitir a clara identificação de cada item e a composição do valor total da contratação.' },
   { id: 'justificativa_parcelamento', label: '9. JUSTIFICATIVAS PARA O PARCELAMENTO OU NÃO DA CONTRATAÇÃO (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'A regra é o parcelamento do objeto, desde que técnica e economicamente viável. O objetivo é aumentar a competição. Não parcelar exige fundamentação robusta no ETP, demonstrando que a divisão do objeto prejudicaria a economia de escala, a integração da solução ou a eficiência administrativa.' },
@@ -364,7 +457,7 @@ const INITIAL_STATE: ETPData = {
   processo_spae: '', unidade_requisitante: '', responsavel: '',
   justificativa_necessidade: '', levantamento_mercado: '',
   objeto_sucinto: '', especificacoes_tecnicas: '', requisitos_header: '', descricao_solucao_integral: '',
-  requisitos_exigencias: '', requisitos_qualidade: '', requisitos_marca: '',
+  requisitos_exigencias: '', requisitos_qualidade: '', requisitos_marca: '', requisitos_continuos: '',
   requisitos_amostra: '', requisitos_transicao: '',
   garantia_contratual: '', garantia_tecnica: '', assistencia_tecnica: '',
   requisitos_vistoria: '', requisitos_subcontratacao: '', requisitos_execucao: '', requisitos_dimensionamento: '',
@@ -376,6 +469,7 @@ const INITIAL_STATE: ETPData = {
   analise_riscos_resumo: '', tabela_riscos_interna: '', tabela_riscos_externa: '',
   fotos: '',
   assinaturas: '',
+  _version: 2,
 };
 
 const base64ToUint8Array = (base64: string) => {
@@ -624,7 +718,20 @@ export default function App() {
 
   const loadDraft = (draft: any, adminView = false) => {
     if (draft && draft.data) {
-      setFormData(draft.data);
+      let data = { ...draft.data };
+      
+      // Crítica do sistema: Migração para inclusão do item 6.3 (Caracterização de Serviços Contínuos)
+      // Como os IDs são descritivos (ex: requisitos_amostra), o texto antigo JÁ aparecerá no novo número (6.4)
+      // pois o ID requisitos_amostra agora está associado ao rótulo 6.4.
+      // Apenas garantimos que o novo campo 6.3 (requisitos_continuos) seja inicializado se não existir.
+      if (!data._version || data._version < 2) {
+        if (data.requisitos_continuos === undefined) {
+          data.requisitos_continuos = '';
+        }
+        data._version = 2;
+      }
+      
+      setFormData(data);
     } else {
       setFormData(INITIAL_STATE);
     }
@@ -754,7 +861,7 @@ export default function App() {
       'diag_problema_necessidade', 'diag_alternativas_solucao', 'diag_objeto_vigencia', 'diag_exigencias_padroes',
       'diag_quantidades_valor', 'diag_parcelamento_providencias', 'diag_correlatas_ambientais', 'diag_riscos_sucesso'
     ];
-    return mandatoryFields.every(field => (formData[field]?.length || 0) > 10);
+    return mandatoryFields.every(field => (String(formData[field] || '').length) > 10);
   };
 
   const handleGlobalGenerate = async (fillEmpty: boolean = true) => {
@@ -769,10 +876,10 @@ export default function App() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
-      const filledFields = Object.keys(formData).filter(key => !!formData[key as keyof ETPData] && formData[key as keyof ETPData].length > 0);
+      const filledFields = Object.keys(formData).filter(key => key !== '_version' && !!formData[key as keyof ETPData] && String(formData[key as keyof ETPData]).length > 0);
       const emptyFields = structure
         .filter(item => item.isAiEnabled !== false && item.section !== '0. DIAGNÓSTICO INICIAL')
-        .filter(item => !formData[item.id as keyof ETPData] || formData[item.id as keyof ETPData].length === 0)
+        .filter(item => !formData[item.id as keyof ETPData] || String(formData[item.id as keyof ETPData]).length === 0)
         .map(item => item.id);
 
       const diagnosticInfo = `
@@ -947,7 +1054,7 @@ export default function App() {
                   style: "heading3",
                 }));
 
-                let content = formData[item.id] || "---";
+                let content = String(formData[item.id] || "---");
                 
                 if (item.id === 'requisitos_header' && (!formData[item.id] || formData[item.id] === '')) {
                   return elements;
@@ -1001,7 +1108,7 @@ export default function App() {
                 }
 
                 elements.push(new Paragraph({
-                  children: [new TextRun(content)],
+                  children: [new TextRun(String(content))],
                   alignment: AlignmentType.JUSTIFIED,
                   spacing: { after: 200 }
                 }));
@@ -1159,10 +1266,10 @@ export default function App() {
 
                   let displayContent = '';
                   if (item.id === 'tabela_estimativa_quantitativos_precos') {
-                    displayContent = `<div class="tiptap-content">${content || '---'}</div>`;
+                    displayContent = `<div class="tiptap-content">${String(content || '---')}</div>`;
                   } else if (item.id === 'fotos') {
                     try {
-                      const images = JSON.parse(content);
+                      const images = JSON.parse(String(content));
                       displayContent = `<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 10px;">
                         ${images.map((img: string) => `<img src="${img}" style="width: 100%; border-radius: 8px; border: 1px solid #ccc;" />`).join('')}
                       </div>`;
@@ -2104,7 +2211,7 @@ export default function App() {
                           <div className="text-center space-y-4">
                             <div className="flex justify-center gap-2">
                               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                                <div key={i} className={`w-3 h-3 rounded-full transition-all ${formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData]?.length > 10 ? 'bg-green-500 scale-110' : 'bg-slate-200'}`} />
+                                <div key={i} className={`w-3 h-3 rounded-full transition-all ${String(formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData] || '').length > 10 ? 'bg-green-500 scale-110' : 'bg-slate-200'}`} />
                               ))}
                             </div>
                             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Complete o diagnóstico para prosseguir</p>
@@ -2280,13 +2387,13 @@ export default function App() {
                           {item.id === 'tabela_estimativa_quantitativos_precos' ? (
                             <div 
                               className="tiptap-content text-sm text-slate-700"
-                              dangerouslySetInnerHTML={{ __html: content || "Pendente." }} 
+                              dangerouslySetInnerHTML={{ __html: String(content || "Pendente.") }} 
                             />
                           ) : item.id === 'fotos' ? (
                             <div className="grid grid-cols-2 gap-4 mt-4">
                               {(() => {
                                 try {
-                                  const images = JSON.parse(content || '[]');
+                                  const images = JSON.parse(String(content || '[]'));
                                   return images.map((img: string, idx: number) => (
                                     <img key={idx} src={img} className="w-full rounded-xl border border-slate-200" referrerPolicy="no-referrer" />
                                   ));
@@ -2344,13 +2451,13 @@ export default function App() {
                     <div 
                       className="tiptap-content"
                       style={{ fontSize: '11pt' }}
-                      dangerouslySetInnerHTML={{ __html: content || "Não informado." }} 
+                      dangerouslySetInnerHTML={{ __html: String(content || "Não informado.") }} 
                     />
                   ) : item.id === 'fotos' ? (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '10px' }}>
                       {(() => {
                         try {
-                          const images = JSON.parse(content || '[]');
+                          const images = JSON.parse(String(content || '[]'));
                           return images.map((img: string, idx: number) => (
                             <img key={idx} src={img} style={{ width: '100%', borderRadius: '8px', border: '1px solid #ccc' }} referrerPolicy="no-referrer" />
                           ));
