@@ -3087,9 +3087,9 @@ export default function App() {
                             {item.helpText && (
                               <button 
                                 onClick={() => setHelpPopup({ title: item.label, content: item.helpText! })}
-                                className="text-[9px] font-black text-slate-600 uppercase bg-white border border-slate-200 px-3 py-1.5 rounded-full hover:bg-slate-50 flex items-center gap-2 shadow-sm transition-all"
+                                className="text-[9px] font-black text-amber-900 uppercase bg-yellow-100 border border-yellow-200 px-3 py-1.5 rounded-full hover:bg-yellow-200 flex items-center gap-2 shadow-sm transition-all animate-pulse"
                               >
-                                <Icon name="Info" size={10} />
+                                <span className="text-[12px]">⚠️</span>
                                 Ajuda
                               </button>
                             )}
