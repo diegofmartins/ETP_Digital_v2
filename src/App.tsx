@@ -486,6 +486,14 @@ const base64ToUint8Array = (base64: string) => {
   return bytes;
 };
 
+const DiscreetFooter = () => (
+  <footer className="mt-auto py-6 text-center no-print border-t border-slate-100/50">
+    <p className="text-[9px] text-slate-300 font-medium tracking-tight">
+      Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
+    </p>
+  </footer>
+);
+
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<'user' | 'master'>('user');
@@ -1716,14 +1724,6 @@ export default function App() {
       </div>
     );
   }
-
-  const DiscreetFooter = () => (
-    <footer className="mt-auto py-6 text-center no-print border-t border-slate-100/50">
-      <p className="text-[9px] text-slate-300 font-medium tracking-tight">
-        Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
-      </p>
-    </footer>
-  );
 
   const Modals = () => (
     <AnimatePresence>
