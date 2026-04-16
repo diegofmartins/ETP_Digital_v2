@@ -1672,12 +1672,13 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-md w-full text-center"
-        >
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
+        <div className="flex-1 flex flex-col items-center justify-center w-full">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-md w-full text-center"
+          >
           <div className="bg-indigo-600 w-20 h-20 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-indigo-200">
             <Icon name="Wand2" size={40} />
           </div>
@@ -1708,9 +1709,21 @@ export default function App() {
             Câmara Municipal de Curitiba
           </p>
         </motion.div>
+        </div>
+        <div className="w-full">
+          <DiscreetFooter />
+        </div>
       </div>
     );
   }
+
+  const DiscreetFooter = () => (
+    <footer className="mt-auto py-6 text-center no-print border-t border-slate-100/50">
+      <p className="text-[9px] text-slate-300 font-medium tracking-tight">
+        Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
+      </p>
+    </footer>
+  );
 
   const Modals = () => (
     <AnimatePresence>
@@ -2107,12 +2120,13 @@ export default function App() {
 
   if (userStatus === 'pending' || userStatus === 'disabled') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-lg w-full text-center"
-        >
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
+        <div className="flex-1 flex flex-col items-center justify-center w-full">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-lg w-full text-center"
+          >
           <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl ${userStatus === 'pending' ? 'bg-orange-50 text-orange-600 shadow-orange-100' : 'bg-red-50 text-red-600 shadow-red-100'}`}>
             <Icon name={userStatus === 'pending' ? "Loader2" : "ShieldCheck"} size={40} className={userStatus === 'pending' ? "animate-spin" : ""} />
           </div>
@@ -2131,6 +2145,10 @@ export default function App() {
             Sair da Conta
           </button>
         </motion.div>
+        </div>
+        <div className="w-full">
+          <DiscreetFooter />
+        </div>
       </div>
     );
   }
@@ -2569,7 +2587,7 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Modals />
       
       {view === 'dashboard' ? (
@@ -3191,13 +3209,9 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
-          <footer className="mt-8 py-6 text-center no-print border-t border-slate-100">
-            <p className="text-[9px] text-slate-300 font-medium tracking-tight">
-              Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
-            </p>
-          </footer>
         </div>
       )}
+      <DiscreetFooter />
     </div>
   );
 }
