@@ -462,7 +462,7 @@ const INITIAL_STATE: ETPData = {
   garantia_contratual: '', garantia_tecnica: '', assistencia_tecnica: '',
   requisitos_vistoria: '', requisitos_subcontratacao: '', requisitos_execucao: '', requisitos_dimensionamento: '',
   estimativa_quantidades_texto: '', estimativa_valor_texto: '',
-  tabela_estimativa_quantitativos_precos: '<table style="border-collapse:collapse;width:100%;border:1px solid #ccc"><thead><tr style="background-color:#e2e8f0"><th style="border:1px solid #ccc;padding:8px;text-align:center">Item</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Descrição</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Quantidade</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Valor Unitário</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Valor Total</th></tr></thead><tbody><tr><td style="border:1px solid #ccc;padding:8px;text-align:center">1</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td></tr><tr><td style="border:1px solid #ccc;padding:8px;text-align:center">2</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td></tr><tr style="background-color:#e2e8f0;font-weight:bold"><td colspan="4" style="border:1px solid #ccc;padding:8px;text-align:center">TOTAL</td><td style="border:1px solid #ccc;padding:8px;text-align:center">R$ 0,00</td></tr></tbody></table>',
+  tabela_estimativa_quantitativos_precos: '<table style="border-collapse:collapse;width:100%;border:1px solid #000"><thead><tr style="background-color:#e2e8f0"><th style="border:1px solid #000;padding:8px;text-align:center">Item</th><th style="border:1px solid #000;padding:8px;text-align:center">Descrição</th><th style="border:1px solid #000;padding:8px;text-align:center">Quantidade</th><th style="border:1px solid #000;padding:8px;text-align:center">Valor Unitário</th><th style="border:1px solid #000;padding:8px;text-align:center">Valor Total</th></tr></thead><tbody><tr><td style="border:1px solid #000;padding:8px;text-align:center">1</td><td style="border:1px solid #000;padding:8px">&nbsp;</td><td style="border:1px solid #000;padding:8px">&nbsp;</td><td style="border:1px solid #000;padding:8px">&nbsp;</td><td style="border:1px solid #000;padding:8px">&nbsp;</td></tr><tr><td style="border:1px solid #000;padding:8px;text-align:center">2</td><td style="border:1px solid #000;padding:8px">&nbsp;</td><td style="border:1px solid #000;padding:8px">&nbsp;</td><td style="border:1px solid #000;padding:8px">&nbsp;</td><td style="border:1px solid #000;padding:8px">&nbsp;</td></tr><tr style="background-color:#e2e8f0;font-weight:bold"><td colspan="4" style="border:1px solid #000;padding:8px;text-align:center uppercase">TOTAL ESTIMADO</td><td style="border:1px solid #000;padding:8px;text-align:center">R$ 0,00</td></tr></tbody></table>',
   justificativa_parcelamento: '', resultados_pretendidos: '',
   providencias_adm: '', contratacoes_correlatas: '', impactos_ambientais: '',
   alinhamento_planejamento: '', posicionamento_conclusivo: '',
@@ -1358,18 +1358,38 @@ export default function App() {
                     if (rows.length > 0) {
                       elements.push(new DocxTable({
                         width: { size: 100, type: WidthType.PERCENTAGE },
-                        rows: rows.map(row => new DocxTableRow({
-                          children: (() => {
-                          const cells = Array.from(row.querySelectorAll('td, th'));
-                          if (cells.length === 0) {
-                            return [new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] })];
-                          }
-                          return cells.map(cell => new DocxTableCell({
-                            shading: cell.tagName === 'TH' ? { fill: "F5F5F5" } : undefined,
-                            children: [new Paragraph({ children: [new TextRun({ text: cell.textContent || "", bold: cell.tagName === 'TH' })] })],
-                          }));
-                        })(),
-                        })),
+                        rows: rows.map(row => {
+                          const htmlRow = row as HTMLElement;
+                          return new DocxTableRow({
+                            children: (() => {
+                              const cells = Array.from(htmlRow.querySelectorAll('td, th'));
+                              if (cells.length === 0) {
+                                return [new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] })];
+                              }
+                              return cells.map(cell => {
+                                const htmlCell = cell as HTMLElement;
+                                const style = htmlCell.getAttribute('style') || '';
+                                const parentStyle = htmlRow.getAttribute('style') || '';
+                                const hasBg = style.includes('background-color') || parentStyle.includes('background-color');
+                                const isBold = htmlCell.tagName === 'TH' || style.includes('font-weight:bold') || parentStyle.includes('font-weight:bold');
+                                
+                                return new DocxTableCell({
+                                  shading: (htmlCell.tagName === 'TH' || hasBg) ? { fill: "F5F5F5" } : undefined,
+                                  columnSpan: parseInt(htmlCell.getAttribute('colspan') || '1'),
+                                  children: [new Paragraph({ 
+                                    children: [new TextRun({ 
+                                      text: (htmlCell.textContent || "").trim(), 
+                                      bold: isBold 
+                                    })],
+                                    alignment: htmlCell.style.textAlign === 'center' ? AlignmentType.CENTER : 
+                                               htmlCell.style.textAlign === 'right' ? AlignmentType.RIGHT : 
+                                               AlignmentType.LEFT
+                                  })],
+                                });
+                              });
+                            })(),
+                          });
+                        }),
                       }));
                       return elements;
                     }
