@@ -45,6 +45,8 @@ export interface ETPData {
   analise_riscos_resumo: string;
   tabela_riscos_interna: string;
   tabela_riscos_externa: string;
+  include_riscos_interna: boolean;
+  include_riscos_externa: boolean;
   fotos: string;
   assinaturas: string;
   _version?: number;

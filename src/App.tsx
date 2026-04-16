@@ -462,11 +462,15 @@ const INITIAL_STATE: ETPData = {
   garantia_contratual: '', garantia_tecnica: '', assistencia_tecnica: '',
   requisitos_vistoria: '', requisitos_subcontratacao: '', requisitos_execucao: '', requisitos_dimensionamento: '',
   estimativa_quantidades_texto: '', estimativa_valor_texto: '',
-  tabela_estimativa_quantitativos_precos: '',
+  tabela_estimativa_quantitativos_precos: '<table style="border-collapse:collapse;width:100%;border:1px solid #ccc"><thead><tr style="background-color:#e2e8f0"><th style="border:1px solid #ccc;padding:8px;text-align:center">Item</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Descrição</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Quantidade</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Valor Unitário</th><th style="border:1px solid #ccc;padding:8px;text-align:center">Valor Total</th></tr></thead><tbody><tr><td style="border:1px solid #ccc;padding:8px;text-align:center">1</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td></tr><tr><td style="border:1px solid #ccc;padding:8px;text-align:center">2</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td><td style="border:1px solid #ccc;padding:8px">&nbsp;</td></tr><tr style="background-color:#e2e8f0;font-weight:bold"><td colspan="4" style="border:1px solid #ccc;padding:8px;text-align:center">TOTAL</td><td style="border:1px solid #ccc;padding:8px;text-align:center">R$ 0,00</td></tr></tbody></table>',
   justificativa_parcelamento: '', resultados_pretendidos: '',
   providencias_adm: '', contratacoes_correlatas: '', impactos_ambientais: '',
   alinhamento_planejamento: '', posicionamento_conclusivo: '',
-  analise_riscos_resumo: '', tabela_riscos_interna: '', tabela_riscos_externa: '',
+  analise_riscos_resumo: '', 
+  tabela_riscos_interna: '<table style="border-collapse:collapse;width:100%;border:1px solid #000"><thead><tr style="background-color:#e2e8f0"><th style="border:1px solid #000;padding:8px;text-align:right;width:15%">FASE:</th><th colspan="4" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">INTERNA</th></tr><tr style="background-color:#e2e8f0"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">Riscos referente a fase de análise escolhida:</th></tr></thead><tbody><tr style="background-color:#f1f5f9"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">RISCO 1</th></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold;width:20%">Situação de Risco:</td><td colspan="4" style="border:1px solid #000;padding:8px">Atrasos na contratação decorrentes de atraso na tramitação do processo administrativo. <strong>[EXEMPLO]</strong></td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Probabilidade:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixa</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Média</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alta</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Impacto:</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Baixo</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Médio</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alto</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Plano de Mitigação:</td><td colspan="4" style="border:1px solid #000;padding:8px">Acompanhamento do processo e apoio às áreas envolvidas. <strong>[EXEMPLO]</strong></td></tr><tr style="background-color:#f1f5f9"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">RISCO 2</th></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Situação de Risco:</td><td colspan="4" style="border:1px solid #000;padding:8px">Equívocos nos quantitativos estimados. <strong>[EXEMPLO]</strong></td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Probabilidade:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixa</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Média</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alta</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Impacto:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixo</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Médio</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alto</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Plano de Mitigação:</td><td colspan="4" style="border:1px solid #000;padding:8px">A área demandante deve prever o quantitativo dos itens tomando como base o consumo histórico dos anos anteriores, bem como seu planejamento futuro. <strong>[EXEMPLO]</strong></td></tr><tr><td colspan="5" style="border:1px solid #000;padding:8px;text-align:center">(...)</td></tr></tbody></table>', 
+  tabela_riscos_externa: '<table style="border-collapse:collapse;width:100%;border:1px solid #000"><thead><tr style="background-color:#e2e8f0"><th style="border:1px solid #000;padding:8px;text-align:right;width:15%">FASE:</th><th colspan="4" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">EXTERNA</th></tr><tr style="background-color:#e2e8f0"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">Riscos referente a fase de análise escolhida:</th></tr></thead><tbody><tr style="background-color:#f1f5f9"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">RISCO 1</th></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold;width:20%">Situação de Risco:</td><td colspan="4" style="border:1px solid #000;padding:8px">Ausência de empresas que atendam aos requisitos da contratação. <strong>[EXEMPLO]</strong></td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Probabilidade:</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Baixa</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Média</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alta</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Impacto:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixo</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Médio</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alto</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Plano de Mitigação:</td><td colspan="4" style="border:1px solid #000;padding:8px">Ampla pesquisa preliminar, pela Diretoria de Contratações, sobre as empresas disponíveis no mercado e confirmação junto às empresas se elas atendem aos requisitos da contratação. <strong>[EXEMPLO]</strong></td></tr><tr style="background-color:#f1f5f9"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">RISCO 2</th></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Situação de Risco:</td><td colspan="4" style="border:1px solid #000;padding:8px">Impugnação e recursos no percurso do processo licitatório, ocasionando atrasos. <strong>[EXEMPLO]</strong></td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Probabilidade:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixa</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Média</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alta</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Impacto:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixo</td><td style="border:1px solid #000;padding:8px;text-align:center">( x ) Médio</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alto</td></tr><tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Plano de Mitigação:</td><td colspan="4" style="border:1px solid #000;padding:8px">Elaboração do termo de referência e edital da licitação com equipe das áreas de Planejamento, Contratações, Contratos e Jurídica e com participação ativa da área requisitante, subsidiando as demais com informações relevantes para o delineamento do objeto e eventuais esclarecimentos. <strong>[EXEMPLO]</strong></td></tr><tr><td colspan="5" style="border:1px solid #000;padding:8px;text-align:center">(...)</td></tr></tbody></table>',
+  include_riscos_interna: false,
+  include_riscos_externa: false,
   fotos: '',
   assinaturas: '',
   _version: 2,
@@ -555,7 +559,10 @@ export default function App() {
   }, [allUsers, userSort]);
 
   const sortedTrash = useMemo(() => {
-    const sorted = [...trashDrafts].sort((a, b) => {
+    // Deduplicate by ID
+    const uniqueTrash = Array.from(new Map(trashDrafts.map(d => [d.id, d])).values());
+    
+    const sorted = uniqueTrash.sort((a, b) => {
       let aValue = a[etpSort.key];
       let bValue = b[etpSort.key];
 
@@ -685,18 +692,21 @@ export default function App() {
 
   // Users Listener (Master only)
   useEffect(() => {
-    if (userRole === 'master' && userStatus === 'approved') {
-      return onSnapshot(collection(db, 'users'), (snapshot) => {
+    if (userRole === 'master' && userStatus === 'approved' && isAuthReady) {
+      const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
         setAllUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, (error) => {
+        console.warn("Users listener permission error (expected during login):", error);
       });
+      return unsubscribe;
     }
-  }, [userRole, userStatus]);
+  }, [userRole, userStatus, isAuthReady]);
 
   // Trash Listener (Master only)
   useEffect(() => {
-    if (userRole === 'master' && userStatus === 'approved') {
+    if (userRole === 'master' && userStatus === 'approved' && isAuthReady) {
       const q = query(collection(db, 'etps'), where('status', '==', 'deleted'));
-      return onSnapshot(q, (snapshot) => {
+      const unsubscribe = onSnapshot(q, (snapshot) => {
         const now = Date.now();
         const trash = snapshot.docs.map(doc => {
           const data = doc.data();
@@ -718,13 +728,16 @@ export default function App() {
         });
 
         setTrashDrafts(trash.filter(t => !t.isExpired));
+      }, (error) => {
+        console.warn("Trash listener permission error (expected during login):", error);
       });
+      return unsubscribe;
     }
-  }, [userRole, userStatus]);
+  }, [userRole, userStatus, isAuthReady]);
 
   // Drafts Listener
   useEffect(() => {
-    if (!user || userStatus !== 'approved') {
+    if (!user || userStatus !== 'approved' || !isAuthReady) {
       setDrafts([]);
       return;
     }
@@ -1218,7 +1231,9 @@ export default function App() {
       const filteredStructure = structure
         .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(s.id))
         .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
-        .filter(s => s.id !== 'fotos' || (formData && formData.fotos));
+        .filter(s => s.id !== 'fotos' || (formData && formData.fotos))
+        .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
+        .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa));
 
       const doc = new Document({
         styles: {
@@ -1332,23 +1347,32 @@ export default function App() {
                   return elements;
                 }
 
-                if (item.id === 'tabela_estimativa_quantitativos_precos') {
+                if (['tabela_estimativa_quantitativos_precos', 'tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id)) {
                   const parser = new DOMParser();
                   const htmlDoc = parser.parseFromString(content, 'text/html');
                   const tableElement = htmlDoc.querySelector('table');
                   
                   if (tableElement) {
                     const rows = Array.from(tableElement.querySelectorAll('tr'));
-                    elements.push(new DocxTable({
-                      width: { size: 100, type: WidthType.PERCENTAGE },
-                      rows: rows.map(row => new DocxTableRow({
-                        children: Array.from(row.querySelectorAll('td, th')).map(cell => new DocxTableCell({
-                          shading: cell.tagName === 'TH' ? { fill: "F5F5F5" } : undefined,
-                          children: [new Paragraph({ children: [new TextRun({ text: cell.textContent || "", bold: cell.tagName === 'TH' })] })],
+                    
+                    if (rows.length > 0) {
+                      elements.push(new DocxTable({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: rows.map(row => new DocxTableRow({
+                          children: (() => {
+                          const cells = Array.from(row.querySelectorAll('td, th'));
+                          if (cells.length === 0) {
+                            return [new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] })];
+                          }
+                          return cells.map(cell => new DocxTableCell({
+                            shading: cell.tagName === 'TH' ? { fill: "F5F5F5" } : undefined,
+                            children: [new Paragraph({ children: [new TextRun({ text: cell.textContent || "", bold: cell.tagName === 'TH' })] })],
+                          }));
+                        })(),
                         })),
-                      })),
-                    }));
-                    return elements;
+                      }));
+                      return elements;
+                    }
                   }
                   content = htmlDoc.body.textContent || "";
                 }
@@ -1387,64 +1411,72 @@ export default function App() {
 
                 return elements;
               }),
-            new Paragraph({ children: [new TextRun("")], spacing: { before: 600 } }),
-            new DocxTable({
-              width: { size: 100, type: WidthType.PERCENTAGE },
-              rows: (() => {
-                const signatureLines = (formData.assinaturas || "")
-                  .split('\n')
-                  .map(line => line.trim())
-                  .filter(line => line.length > 0);
+            ...(() => {
+              const signatureLines = (formData.assinaturas || "")
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
 
-                const rows: DocxTableRow[] = [];
-                for (let i = 0; i < signatureLines.length; i += 2) {
-                  const left = signatureLines[i];
-                  const right = signatureLines[i + 1];
+              if (signatureLines.length === 0) return [];
 
-                  const rowChildren = [];
-                  
-                  // Left signature
-                  const [leftName, leftDept] = left.split(',').map(s => s.trim());
+              const rows: DocxTableRow[] = [];
+              for (let i = 0; i < signatureLines.length; i += 2) {
+                const left = signatureLines[i];
+                const right = signatureLines[i + 1];
+
+                const rowChildren = [];
+                
+                // Left signature
+                const [leftName, leftDept] = left.split(',').map(s => s.trim());
+                rowChildren.push(new DocxTableCell({
+                  borders: { top: { style: "single", size: 6 } },
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: (leftName || "").toUpperCase(), size: 18, bold: true })],
+                      alignment: AlignmentType.CENTER,
+                    }),
+                    new Paragraph({
+                      children: [new TextRun({ text: leftDept || "", size: 16 })],
+                      alignment: AlignmentType.CENTER,
+                    })
+                  ]
+                }));
+
+                // Right signature (if exists)
+                if (right) {
+                  const [rightName, rightDept] = right.split(',').map(s => s.trim());
                   rowChildren.push(new DocxTableCell({
                     borders: { top: { style: "single", size: 6 } },
                     children: [
                       new Paragraph({
-                        children: [new TextRun({ text: (leftName || "").toUpperCase(), size: 18, bold: true })],
+                        children: [new TextRun({ text: (rightName || "").toUpperCase(), size: 18, bold: true })],
                         alignment: AlignmentType.CENTER,
                       }),
                       new Paragraph({
-                        children: [new TextRun({ text: leftDept || "", size: 16 })],
+                        children: [new TextRun({ text: rightDept || "", size: 16 })],
                         alignment: AlignmentType.CENTER,
                       })
                     ]
                   }));
-
-                  // Right signature (if exists)
-                  if (right) {
-                    const [rightName, rightDept] = right.split(',').map(s => s.trim());
-                    rowChildren.push(new DocxTableCell({
-                      borders: { top: { style: "single", size: 6 } },
-                      children: [
-                        new Paragraph({
-                          children: [new TextRun({ text: (rightName || "").toUpperCase(), size: 18, bold: true })],
-                          alignment: AlignmentType.CENTER,
-                        }),
-                        new Paragraph({
-                          children: [new TextRun({ text: rightDept || "", size: 16 })],
-                          alignment: AlignmentType.CENTER,
-                        })
-                      ]
-                    }));
-                  } else {
-                    rowChildren.push(new DocxTableCell({ borders: { top: { style: "none" } }, children: [] }));
-                  }
-
-                  rows.push(new DocxTableRow({ children: rowChildren }));
-                  rows.push(new DocxTableRow({ children: [new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] }), new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] })] }));
+                } else {
+                  rowChildren.push(new DocxTableCell({ 
+                    borders: { top: { style: "none" }, bottom: { style: "none" }, left: { style: "none" }, right: { style: "none" } }, 
+                    children: [new Paragraph({ children: [new TextRun("")] })] 
+                  }));
                 }
-                return rows;
-              })(),
-            }),
+
+                rows.push(new DocxTableRow({ children: rowChildren }));
+                rows.push(new DocxTableRow({ children: [new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] }), new DocxTableCell({ children: [new Paragraph({ children: [new TextRun("")] })] })] }));
+              }
+
+              return [
+                new Paragraph({ children: [new TextRun("")], spacing: { before: 600 } }),
+                new DocxTable({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  rows: rows,
+                })
+              ];
+            })(),
             new Paragraph({
               children: [new TextRun(`Curitiba, ____ de ____________ de 202_.`)],
               alignment: AlignmentType.CENTER,
@@ -1517,6 +1549,8 @@ export default function App() {
               ${structure
                 .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel', 'assinaturas'].includes(s.id))
                 .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
+                .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
+                .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
                 .map(item => {
                   const content = formData[item.id];
                   if (item.id === 'fotos' && !content) return '';
@@ -1537,7 +1571,7 @@ export default function App() {
                   }
 
                   let displayContent = '';
-                  if (item.id === 'tabela_estimativa_quantitativos_precos') {
+                  if (['tabela_estimativa_quantitativos_precos', 'tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id)) {
                     displayContent = `<div class="tiptap-content">${String(content || '---')}</div>`;
                   } else if (item.id === 'fotos') {
                     try {
@@ -2333,7 +2367,7 @@ export default function App() {
                 const isOnline = u.lastActive && (Date.now() - u.lastActive.toMillis() < 300000); // 5 minutes threshold
                 
                 return (
-                  <tr key={u.uid} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={u.uid || u.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="relative">
@@ -2791,7 +2825,7 @@ export default function App() {
                               )}
                             </div>
                             <textarea 
-                              value={(formData && formData[item.id]) || ''} 
+                              value={String((formData && formData[item.id]) || '')} 
                               onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
                               className="textarea-clean min-h-[120px] text-sm font-medium text-slate-600 bg-slate-50/50 border-slate-100 focus:bg-white focus:border-indigo-200" 
                               placeholder={item.placeholder}
@@ -2859,6 +2893,20 @@ export default function App() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            {['tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) && (
+                              <div className="flex items-center gap-2 mr-2">
+                                <span className="text-[9px] font-black text-slate-400 uppercase">Incluir no documento?</span>
+                                <button
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    [item.id === 'tabela_riscos_interna' ? 'include_riscos_interna' : 'include_riscos_externa']: !prev[item.id === 'tabela_riscos_interna' ? 'include_riscos_interna' : 'include_riscos_externa']
+                                  }))}
+                                  className={`w-10 h-5 rounded-full transition-all relative ${formData[item.id === 'tabela_riscos_interna' ? 'include_riscos_interna' : 'include_riscos_externa'] ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                                >
+                                  <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${formData[item.id === 'tabela_riscos_interna' ? 'include_riscos_interna' : 'include_riscos_externa'] ? 'left-6' : 'left-1'}`} />
+                                </button>
+                              </div>
+                            )}
                             {item.helpText && (
                               <button 
                                 onClick={() => setHelpPopup({ title: item.label, content: item.helpText! })}
@@ -2881,10 +2929,10 @@ export default function App() {
                           </div>
                         </div>
                         <div className="p-6">
-                          {item.id === 'tabela_estimativa_quantitativos_precos' ? (
-                            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                          {['tabela_estimativa_quantitativos_precos', 'tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) ? (
+                            <div className={`border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-opacity ${(['tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) && !formData[item.id === 'tabela_riscos_interna' ? 'include_riscos_interna' : 'include_riscos_externa']) ? 'opacity-50' : 'opacity-100'}`}>
                               <JoditEditor 
-                                value={(formData && formData[item.id]) || ''} 
+                                value={String((formData && formData[item.id]) || '')} 
                                 config={{
                                   readonly: false,
                                   toolbarAdaptive: false,
@@ -2896,7 +2944,7 @@ export default function App() {
                                     'fullsize', 'source'
                                   ],
                                   height: 400,
-                                  placeholder: 'Utilize a ferramenta de tabela acima para compor os quantitativos e preços...',
+                                  placeholder: 'Utilize a ferramenta de tabela acima para compor os dados...',
                                   language: 'pt_br',
                                   askBeforePasteHTML: false,
                                   askBeforePasteFromWord: false,
@@ -2912,7 +2960,7 @@ export default function App() {
                             />
                           ) : (
                             <textarea 
-                              value={(formData && formData[item.id]) || ''} 
+                              value={String((formData && formData[item.id]) || '')} 
                               onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
                               className="textarea-clean min-h-[120px] text-sm resize-y focus:min-h-[250px] transition-all duration-300" 
                               placeholder={item.placeholder || "Preencha aqui..."}
@@ -2963,6 +3011,8 @@ export default function App() {
                 {Object.entries(structure
                   .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel', 'assinaturas'].includes(s.id))
                   .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
+                  .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
+                  .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
                   .reduce((acc, item) => {
                   const section = item.section || 'Outros';
                   if (!acc[section]) acc[section] = [];
@@ -2978,7 +3028,7 @@ export default function App() {
                       return (
                         <div key={item.id} className="mb-8">
                           <h4 className="text-xs font-bold uppercase text-slate-500 mb-2">{item.label}</h4>
-                          {item.id === 'tabela_estimativa_quantitativos_precos' ? (
+                          {['tabela_estimativa_quantitativos_precos', 'tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) ? (
                             <div 
                               className="tiptap-content text-sm text-slate-700"
                               dangerouslySetInnerHTML={{ __html: String(content || "Pendente.") }} 
@@ -3034,14 +3084,18 @@ export default function App() {
               <h1 style={{fontSize: '16pt', fontWeight: 'bold', textTransform: 'uppercase'}}>Estudo Técnico Preliminar</h1>
               <p style={{fontSize: '10pt'}}>Administração Pública Direta e Indireta - Lei 14.133/21</p>
             </div>
-            {structure.filter(item => item.id !== 'assinaturas').map(item => {
+            {structure
+              .filter(item => item.id !== 'assinaturas')
+              .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
+              .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
+              .map(item => {
               const content = formData[item.id];
               if (item.id === 'fotos' && !content) return null;
 
               return (
                 <div key={item.id} style={{marginBottom: '25px'}}>
                   <h2 style={{fontSize: '12pt', fontWeight: 'bold', textTransform: 'uppercase', borderBottom: '1px solid black', marginTop: '15pt', paddingBottom: '3pt'}}>{item.label}</h2>
-                  {item.id === 'tabela_estimativa_quantitativos_precos' ? (
+                  {['tabela_estimativa_quantitativos_precos', 'tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) ? (
                     <div 
                       className="tiptap-content"
                       style={{ fontSize: '11pt' }}
