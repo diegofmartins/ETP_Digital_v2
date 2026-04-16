@@ -388,7 +388,7 @@ const Icon = ({ name, size = 16, className = "" }: { name: string, size?: number
   return <LucideIcon size={size} className={className} />;
 };
 
-const FileUploader = ({ value, onChange }: { value: string, onChange: (value: string) => void }) => {
+const FileUploader = ({ value, onChange, readOnly = false }: { value: string, onChange: (value: string) => void, readOnly?: boolean }) => {
   const [images, setImages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -431,21 +431,25 @@ const FileUploader = ({ value, onChange }: { value: string, onChange: (value: st
         {images.map((img, index) => (
           <div key={index} className="relative w-32 h-32 rounded-xl overflow-hidden border border-slate-200 group">
             <img src={img} alt={`Upload ${index}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            <button
-              onClick={() => removeImage(index)}
-              className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Icon name="X" size={12} />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => removeImage(index)}
+                className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Icon name="X" size={12} />
+              </button>
+            )}
           </div>
         ))}
-        <label className="w-32 h-32 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all text-slate-400 hover:text-indigo-600">
-          <Icon name="ImagePlus" size={24} />
-          <span className="text-[10px] font-bold mt-2 uppercase">Adicionar Foto</span>
-          <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileChange} />
-        </label>
+        {!readOnly && (
+          <label className="w-32 h-32 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all text-slate-400 hover:text-indigo-600">
+            <Icon name="ImagePlus" size={24} />
+            <span className="text-[10px] font-bold mt-2 uppercase">Adicionar Foto</span>
+            <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileChange} />
+          </label>
+        )}
       </div>
-      <p className="text-[10px] text-slate-400 italic">Formatos aceitos: JPG, PNG. Máximo 1MB por imagem.</p>
+      {!readOnly && <p className="text-[10px] text-slate-400 italic">Formatos aceitos: JPG, PNG. Máximo 1MB por imagem.</p>}
     </div>
   );
 };
@@ -473,6 +477,7 @@ const INITIAL_STATE: ETPData = {
   include_riscos_externa: false,
   fotos: '',
   assinaturas: '',
+  status: 'in_progress',
   _version: 2,
 };
 
@@ -524,6 +529,8 @@ export default function App() {
   const [etpSort, setEtpSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
   const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
   const [reassignState, setReassignState] = useState<{ draftId: string, currentEmail: string, title: string } | null>(null);
+
+  const isReadOnly = isAdminViewing || formData?.status === 'completed';
 
   const sortedDrafts = useMemo(() => {
     // Deduplicate by ID
@@ -865,7 +872,7 @@ export default function App() {
         userEmail: user.email,
         title: formData.etp_name || "ETP sem título",
         data: formData,
-        status: 'draft',
+        status: formData.status || 'in_progress',
         updatedAt: serverTimestamp()
       };
 
@@ -966,6 +973,26 @@ export default function App() {
       await deleteDoc(doc(db, 'etps', id));
     } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, 'etps');
+    }
+  };
+
+  const toggleETPStatus = async (draftId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'completed' ? 'in_progress' : 'completed';
+    try {
+      // Find the draft locally first to get current data
+      const draft = drafts.find(d => d.id === draftId);
+      if (!draft) return;
+
+      const updatedData = { ...draft.data, status: newStatus };
+
+      await updateDoc(doc(db, 'etps', draftId), {
+        'data.status': newStatus,
+        data: updatedData,
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.UPDATE, 'etps');
     }
   };
 
@@ -2278,81 +2305,170 @@ export default function App() {
     );
   }
 
-  const renderDashboard = () => (
-    <div className="max-w-6xl mx-auto px-6 py-12">
-      <div className="flex items-center justify-between mb-12">
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Meus ETPs</h2>
-          <p className="text-slate-500">Gerencie seus rascunhos e documentos finalizados.</p>
-        </div>
-        <div className="flex gap-3">
-          {userRole === 'master' && (
-            <button 
-              onClick={() => setView('admin')}
-              className="relative bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all"
-            >
-              <Icon name="ShieldCheck" size={18} /> Painel Master
-              {pendingUsersCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
-                  {pendingUsersCount}
-                </span>
-              )}
-            </button>
-          )}
-          <button 
-            onClick={createNewETP}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
-          >
-            <Icon name="PlusCircle" size={18} /> Novo ETP
-          </button>
-        </div>
-      </div>
+  const renderDashboard = () => {
+    const inProgress = sortedDrafts.filter(d => d.status !== 'completed');
+    const completed = sortedDrafts.filter(d => d.status === 'completed');
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {drafts.length === 0 ? (
-          <div className="col-span-full py-20 text-center bg-white rounded-[32px] border-2 border-dashed border-slate-200">
-            <div className="bg-slate-50 w-16 h-16 rounded-2xl flex items-center justify-center text-slate-300 mx-auto mb-4">
-              <Icon name="FileText" size={32} />
-            </div>
-            <p className="text-slate-400 font-bold">Nenhum ETP encontrado.</p>
-            <button onClick={createNewETP} className="text-indigo-600 text-sm font-bold mt-2 hover:underline">Começar meu primeiro ETP</button>
+    const ETPList = ({ items, type }: { items: any[], type: 'in_progress' | 'completed' }) => (
+      <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
+        {items.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Nenhum ETP {type === 'in_progress' ? 'em edição' : 'concluído'}</p>
           </div>
         ) : (
-          sortedDrafts.map(draft => (
-            <motion.div 
-              key={draft.id}
-              whileHover={{ y: -5 }}
-              className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm hover:shadow-xl transition-all group"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600">
-                  <Icon name="FileText" size={24} />
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => loadDraft(draft, false)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                    <Icon name="Edit3" size={16} />
-                  </button>
-                  <button onClick={() => setDeleteConfirmId(draft.id)} className="p-2 text-slate-300 hover:text-red-600 transition-colors">
-                    <Icon name="Trash2" size={16} />
-                  </button>
-                </div>
-              </div>
-              <h3 className="font-black text-slate-900 mb-1 line-clamp-2">{draft.title}</h3>
-              <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-4">
-                Atualizado em: {draft.updatedAt?.toDate().toLocaleDateString('pt-BR')}
-              </p>
-              <button 
-                onClick={() => loadDraft(draft, false)}
-                className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold group-hover:bg-indigo-600 group-hover:text-white transition-all"
-              >
-                Abrir ETP
-              </button>
-            </motion.div>
-          ))
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Título / Objeto</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Atualização</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {items.map(draft => (
+                  <motion.tr 
+                    key={draft.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="hover:bg-slate-50/50 transition-all group"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-xl ${type === 'in_progress' ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600'}`}>
+                          <Icon name="FileText" size={18} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{draft.title}</h4>
+                          <p className="text-[10px] text-slate-400 font-medium italic">ID: {draft.id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-medium text-slate-600">
+                        {draft.updatedAt?.toDate ? draft.updatedAt.toDate().toLocaleDateString('pt-BR') : 'Recentemente'}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-bold">
+                        {draft.updatedAt?.toDate ? draft.updatedAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2 text-right">
+                        {type === 'in_progress' ? (
+                          <>
+                            <button 
+                              onClick={() => toggleETPStatus(draft.id, 'in_progress')}
+                              className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100 flex items-center gap-2"
+                              title="Marcar como Concluído"
+                            >
+                              <Icon name="CheckCircle" size={12} /> Concluir
+                            </button>
+                            <button 
+                              onClick={() => loadDraft(draft, false)}
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              title="Editar"
+                            >
+                              <Icon name="Edit3" size={18} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => toggleETPStatus(draft.id, 'completed')}
+                              className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-slate-800 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                              title="Enviar para Edição"
+                            >
+                              <Icon name="Edit3" size={12} /> Enviar para edição
+                            </button>
+                            <button 
+                              onClick={() => loadDraft(draft, false)}
+                              className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                              title="Visualizar"
+                            >
+                              <Icon name="Eye" size={18} />
+                            </button>
+                          </>
+                        )}
+                        <button 
+                          onClick={() => setDeleteConfirmId(draft.id)}
+                          className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Excluir"
+                        >
+                          <Icon name="Trash2" size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+
+    return (
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="flex items-center justify-between mb-12">
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Meus ETPs</h2>
+            <p className="text-slate-500">Gerencie seus rascunhos e documentos finalizados.</p>
+          </div>
+          <div className="flex gap-3">
+            {userRole === 'master' && (
+              <button 
+                onClick={() => setView('admin')}
+                className="relative bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all"
+              >
+                <Icon name="ShieldCheck" size={18} /> Painel Master
+                {pendingUsersCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
+                    {pendingUsersCount}
+                  </span>
+                )}
+              </button>
+            )}
+            <button 
+              onClick={createNewETP}
+              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+            >
+              <Icon name="PlusCircle" size={18} /> Novo ETP
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-12">
+          {/* ETPs em Edição */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <Icon name="Edit3" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 leading-tight">Em Edição</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Documentos que você ainda está trabalhando</p>
+              </div>
+            </div>
+            <ETPList items={inProgress} type="in_progress" />
+          </section>
+
+          {/* ETPs Concluídos */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
+                <Icon name="CheckCircle" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 leading-tight">Concluídos</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Documentos finalizados em modo somente leitura</p>
+              </div>
+            </div>
+            <ETPList items={completed} type="completed" />
+          </section>
+        </div>
+      </div>
+    );
+  };
 
   const renderAdmin = () => (
     <div className="max-w-7xl mx-auto px-6 py-12">
@@ -2780,11 +2896,11 @@ export default function App() {
                   <Icon name="Wand2" size={18} />
                 </div>
                 <h1 className="text-sm font-black uppercase tracking-tight">
-                  {isAdminViewing ? "VISUALIZAÇÃO ADMIN" : "EDITOR DE ETP"}
+                  {isReadOnly ? "VISUALIZAÇÃO / CONSULTA" : "EDITOR DE ETP"}
                 </h1>
               </div>
               <div className="flex items-center gap-2">
-                {!isAdminViewing && (
+                {!isReadOnly && (
                   <div className="flex items-center gap-2 mr-4 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
                     <div className={`w-2 h-2 rounded-full ${isSaving ? 'bg-orange-400 animate-pulse' : 'bg-green-500'}`} />
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -2792,7 +2908,7 @@ export default function App() {
                     </span>
                   </div>
                 )}
-                {!isAdminViewing && (
+                {!isReadOnly && (
                   <button 
                     onClick={() => saveDraft(true)}
                     disabled={isSaving}
@@ -2802,7 +2918,7 @@ export default function App() {
                     Salvar
                   </button>
                 )}
-                {isAdminViewing && (
+                {isReadOnly && (
                   <div className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-2 mr-4">
                     <Icon name="ShieldCheck" size={14} />
                     Modo Somente Leitura
@@ -2912,8 +3028,8 @@ export default function App() {
                     <div className="p-4 border-t border-slate-100 bg-slate-50/50">
                       <button 
                         onClick={() => setShowGlobalConfirm(true)}
-                        disabled={!isMandatoryFilled() || !!isGenerating}
-                        className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 ${isMandatoryFilled() ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                        disabled={!isMandatoryFilled() || !!isGenerating || isReadOnly}
+                        className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 ${isMandatoryFilled() && !isReadOnly ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                       >
                         <Icon name="Sparkles" size={14} />
                         Gerar ETP Completo
@@ -2966,8 +3082,9 @@ export default function App() {
                         type="text"
                         value={formData?.etp_name || ''}
                         onChange={(e) => setFormData(prev => ({ ...prev, etp_name: e.target.value }))}
+                        disabled={isReadOnly}
                         placeholder="Ex: Aquisição de Notebooks - TI 2026"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
+                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all outline-none disabled:opacity-60"
                       />
                     </div>
 
@@ -3004,7 +3121,8 @@ export default function App() {
                             <textarea 
                               value={String((formData && formData[item.id]) || '')} 
                               onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
-                              className="textarea-clean min-h-[120px] text-sm font-medium text-slate-600 bg-slate-50/50 border-slate-100 focus:bg-white focus:border-indigo-200" 
+                              disabled={isReadOnly}
+                              className="textarea-clean min-h-[120px] text-sm font-medium text-slate-600 bg-slate-50/50 border-slate-100 focus:bg-white focus:border-indigo-200 disabled:opacity-60" 
                               placeholder={item.placeholder}
                             />
                           </div>
@@ -3093,7 +3211,7 @@ export default function App() {
                                 Ajuda
                               </button>
                             )}
-                            {item.isAiEnabled !== false && (
+                            {item.isAiEnabled !== false && !isReadOnly && (
                               <button 
                                 onClick={() => handleAiAssist(item.id)} 
                                 disabled={isGenerating !== null} 
@@ -3111,7 +3229,7 @@ export default function App() {
                               <JoditEditor 
                                 value={String((formData && formData[item.id]) || '')} 
                                 config={{
-                                  readonly: false,
+                                  readonly: isReadOnly,
                                   toolbarAdaptive: false,
                                   buttons: [
                                     'table', '|',
@@ -3134,12 +3252,14 @@ export default function App() {
                             <FileUploader 
                               value={(formData && formData[item.id]) || ''} 
                               onChange={(value) => setFormData(prev => ({...prev, [item.id]: value}))} 
+                              readOnly={isReadOnly}
                             />
                           ) : (
                             <textarea 
                               value={String((formData && formData[item.id]) || '')} 
                               onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
-                              className="textarea-clean min-h-[120px] text-sm resize-y focus:min-h-[250px] transition-all duration-300" 
+                              disabled={isReadOnly}
+                              className="textarea-clean min-h-[120px] text-sm resize-y focus:min-h-[250px] transition-all duration-300 disabled:opacity-60" 
                               placeholder={item.placeholder || "Preencha aqui..."}
                             />
                           )}
@@ -3150,8 +3270,8 @@ export default function App() {
                     <div className="flex justify-center py-8">
                       <button 
                         onClick={() => setShowGlobalConfirm(true)}
-                        disabled={!!isGenerating}
-                        className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 flex items-center gap-3"
+                        disabled={!!isGenerating || isReadOnly}
+                        className={`bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl flex items-center gap-3 ${isReadOnly ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' : 'hover:bg-indigo-700 shadow-indigo-200'}`}
                       >
                         {isGenerating === 'global' ? <Loader2 size={20} className="animate-spin" /> : <Icon name="Sparkles" size={20} />}
                         Regerar Estudo Completo

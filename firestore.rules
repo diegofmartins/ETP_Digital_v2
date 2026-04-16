@@ -45,7 +45,7 @@ service cloud.firestore {
     // Default master has absolute authority
     function isDefaultMaster() {
       return isAuthenticated() && 
-             request.auth.token.email == "diego.martins@cmc.pr.gov.br" && 
+             request.auth.token.email.lower() == "diego.martins@cmc.pr.gov.br" && 
              request.auth.token.email_verified == true;
     }
     
@@ -90,7 +90,7 @@ service cloud.firestore {
       let requiredFields = ['userId', 'data', 'status'];
       return data.keys().hasAll(requiredFields) &&
              data.userId is string && data.userId.size() < 128 &&
-             data.status in ['draft', 'completed', 'deleted', 'active'] &&
+             data.status in ['draft', 'in_progress', 'completed', 'deleted', 'active'] &&
              data.data is map &&
              data.data.keys().size() < 100 && // Limit number of fields in ETP data
              (!('title' in data) || (data.title is string && data.title.size() < 512)) &&

@@ -49,6 +49,7 @@ export interface ETPData {
   include_riscos_externa: boolean;
   fotos: string;
   assinaturas: string;
+  status?: 'in_progress' | 'completed';
   _version?: number;
 }
 

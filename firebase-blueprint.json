@@ -23,7 +23,7 @@
         "userId": { "type": "string" },
         "userEmail": { "type": "string" },
         "title": { "type": "string" },
-        "status": { "type": "string", "enum": ["draft", "completed"] },
+        "status": { "type": "string", "enum": ["draft", "in_progress", "completed", "deleted", "active"] },
         "data": { "type": "object" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
