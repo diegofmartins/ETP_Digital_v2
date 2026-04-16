@@ -486,14 +486,6 @@ const base64ToUint8Array = (base64: string) => {
   return bytes;
 };
 
-const DiscreetFooter = () => (
-  <footer className="mt-auto py-6 text-center no-print border-t border-slate-100/50">
-    <p className="text-[9px] text-slate-300 font-medium tracking-tight">
-      Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
-    </p>
-  </footer>
-);
-
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<'user' | 'master'>('user');
@@ -552,19 +544,8 @@ export default function App() {
   }, [drafts, etpSort]);
 
   const sortedUsers = useMemo(() => {
-    // Determine duplicates by email
-    const emailCounts = allUsers.reduce((acc, user) => {
-      acc[user.email] = (acc[user.email] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Deduplicate for display, but keep track of duplicates
-    const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.email, { 
-      ...u, 
-      isDuplicate: emailCounts[u.email] > 1,
-      // Prefer approved status if multiple docs exist
-      status: allUsers.filter(x => x.email === u.email).some(x => x.status === 'approved') ? 'approved' : u.status
-    }])).values());
+    // Deduplicate by UID
+    const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.uid || u.id, u])).values());
     
     const sorted = uniqueUsers.sort((a, b) => {
       let aValue = a[userSort.key];
@@ -619,105 +600,119 @@ export default function App() {
   // Auth Listener
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
-      setUser(u);
+      // Clear roles/status immediately to avoid UI flickering/leakage from previous user
+      setUserRole('user');
+      setUserStatus('pending');
+      setHasAcceptedTerms(false);
+      setAllUsers([]);
+      setDrafts([]);
+      
       if (u) {
-        const userRef = doc(db, 'users', u.uid);
-        let userSnap = await getDoc(userRef);
-        
-        const userData = {
-          uid: u.uid,
-          email: u.email,
-          displayName: u.displayName,
-          lastActive: serverTimestamp()
-        };
+        setUser(u);
+        try {
+          const userRef = doc(db, 'users', u.uid);
+          const userSnap = await getDoc(userRef);
+          const userData = {
+            uid: u.uid,
+            email: u.email,
+            displayName: u.displayName,
+            lastActive: serverTimestamp()
+          };
 
-        // If user document exists by UID, check if it's pending. 
-        // If pending, we check if there's an approved document by email to link/merge.
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          let currentStatus = data.status;
-          let currentRole = data.role;
-          let currentTerms = !!data.hasAcceptedTerms;
-
-          if (currentStatus === 'pending') {
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('email', '==', u.email));
-            const querySnap = await getDocs(q);
-            
-            // Look for an approved doc that is NOT this one
-            const approvedDoc = querySnap.docs.find(doc => doc.id !== u.uid && doc.data().status === 'approved');
-            
-            if (approvedDoc) {
-              const approvedData = approvedDoc.data();
-              currentStatus = 'approved';
-              currentRole = approvedData.role || currentRole;
-              currentTerms = !!approvedData.hasAcceptedTerms;
-              
-              // Merge/Update current doc
-              await updateDoc(userRef, { 
-                status: 'approved',
-                role: currentRole,
-                hasAcceptedTerms: currentTerms,
-                lastActive: serverTimestamp()
-              });
-              
-              // Optionally delete the old duplicate if it's different
-              // But safer to just leave it and let the system use the UID-based one now
-            }
-          }
-
-          setUserRole(currentRole);
-          setUserStatus(currentStatus);
-          setHasAcceptedTerms(currentTerms);
-          
-          if (currentStatus === 'approved' && !currentTerms) {
-            setShowWelcomePopup(true);
-          }
-          
-          await updateDoc(userRef, { lastActive: serverTimestamp() });
-        } else {
-          // Check if user already exists by email to prevent duplication
-          const usersRef = collection(db, 'users');
-          const q = query(usersRef, where('email', '==', u.email));
-          const querySnap = await getDocs(q);
-          
-          if (!querySnap.empty) {
-            // Prefer an approved document if multiples found
-            const approvedDoc = querySnap.docs.find(doc => doc.data().status === 'approved');
-            const existingUserDoc = approvedDoc || querySnap.docs[0];
-            const data = existingUserDoc.data();
-            
-            setUserRole(data.role);
-            setUserStatus(data.status);
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            console.log("Existing user found:", data.email, "Role:", data.role, "Status:", data.status);
+            setUserRole(data.role || 'user');
+            setUserStatus(data.status || 'pending');
             setHasAcceptedTerms(!!data.hasAcceptedTerms);
             
+            // Show welcome popup if approved but hasn't accepted terms yet
             if (data.status === 'approved' && !data.hasAcceptedTerms) {
               setShowWelcomePopup(true);
             }
             
-            // If the existing document ID is NOT the current UID, we should link it
-            // or migrate it. For simplicity, we update the existing doc with the current UID.
-            // Note: The system will continue using this document ID for state updates in Admin.
-            await updateDoc(existingUserDoc.ref, { 
-              lastActive: serverTimestamp(),
-              uid: u.uid 
-            });
+            await updateDoc(userRef, { lastActive: serverTimestamp() });
           } else {
-            const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
-            const role = isMasterEmail ? 'master' : 'user';
-            const status = isMasterEmail ? 'approved' : 'pending';
-            await setDoc(userRef, {
-              ...userData,
-              role: role,
-              status: status,
-              hasAcceptedTerms: false,
-              createdAt: serverTimestamp()
-            });
-            setUserRole(role);
-            setUserStatus(status);
-            setHasAcceptedTerms(false);
+            // Check if user already exists by email to prevent duplication
+            try {
+              const usersRef = collection(db, 'users');
+              const q = query(usersRef, where('email', '==', u.email), limit(1));
+              const querySnap = await getDocs(q);
+              
+              if (!querySnap.empty) {
+                // User exists with different UID or same email, link them
+                const existingUserDoc = querySnap.docs[0];
+                const data = existingUserDoc.data();
+                console.log("Linked user by email found:", data.email, "Role:", data.role, "Status:", data.status);
+                setUserRole(data.role || 'user');
+                setUserStatus(data.status || 'pending');
+                setHasAcceptedTerms(!!data.hasAcceptedTerms);
+                
+                if (data.status === 'approved' && !data.hasAcceptedTerms) {
+                  setShowWelcomePopup(true);
+                }
+                
+                // Link current UID to existing document
+                try {
+                  await updateDoc(existingUserDoc.ref, { 
+                    lastActive: serverTimestamp(),
+                    uid: u.uid 
+                  });
+                } catch (linkErr) {
+                  console.error("Error linking UID to existing document:", linkErr);
+                }
+              } else {
+                const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
+                const role = isMasterEmail ? 'master' : 'user';
+                const status = isMasterEmail ? 'approved' : 'pending';
+                console.log("New user created:", u.email, "Role:", role, "Status:", status);
+                await setDoc(userRef, {
+                  ...userData,
+                  role: role,
+                  status: status,
+                  hasAcceptedTerms: false,
+                  createdAt: serverTimestamp()
+                });
+                setUserRole(role);
+                setUserStatus(status);
+                setHasAcceptedTerms(false);
+              }
+            } catch (queryErr) {
+              console.error("Error querying user by email (fallback create):", queryErr);
+              // Fallback: create even if query fails (rule should allow setDoc if document doesn't exist)
+              const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
+              const role = isMasterEmail ? 'master' : 'user';
+              const status = isMasterEmail ? 'approved' : 'pending';
+              
+              try {
+                await setDoc(userRef, {
+                  ...userData,
+                  role: role,
+                  status: status,
+                  hasAcceptedTerms: false,
+                  createdAt: serverTimestamp()
+                });
+              } catch (setErr) {
+                console.error("Critical: Fallback setDoc failed:", setErr);
+              }
+              
+              setUserRole(role);
+              setUserStatus(status);
+            }
           }
+        } catch (err) {
+          console.error("Error initializing user data:", err);
+          setApiError("Erro ao inicializar dados do usuário.");
         }
+      } else {
+        // Reset ALL user states on sign out
+        setUser(null);
+        setUserRole('user');
+        setUserStatus('pending');
+        setHasAcceptedTerms(false);
+        setDrafts([]);
+        setAllUsers([]);
+        setTrashDrafts([]);
       }
       setIsAuthReady(true);
     });
@@ -745,21 +740,24 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user, userStatus]);
 
+  // Master check also considers the default master email
+  const isMaster = userRole === 'master' || user?.email === "diego.martins@cmc.pr.gov.br";
+
   // Users Listener (Master only)
   useEffect(() => {
-    if (userRole === 'master' && userStatus === 'approved' && isAuthReady) {
+    if (isMaster && userStatus === 'approved' && isAuthReady) {
       const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
         setAllUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       }, (error) => {
-        console.warn("Users listener permission error (expected during login):", error);
+        console.warn("Users listener permission error:", error);
       });
       return unsubscribe;
     }
-  }, [userRole, userStatus, isAuthReady]);
+  }, [isMaster, userStatus, isAuthReady]);
 
   // Trash Listener (Master only)
   useEffect(() => {
-    if (userRole === 'master' && userStatus === 'approved' && isAuthReady) {
+    if (isMaster && userStatus === 'approved' && isAuthReady) {
       const q = query(collection(db, 'etps'), where('status', '==', 'deleted'));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const now = Date.now();
@@ -970,29 +968,29 @@ export default function App() {
     }
   };
 
-  const updateUserStatus = async (docId: string, newStatus: 'approved' | 'disabled' | 'pending') => {
+  const updateUserStatus = async (uid: string, newStatus: 'approved' | 'disabled' | 'pending') => {
     try {
-      await updateDoc(doc(db, 'users', docId), { status: newStatus });
+      await updateDoc(doc(db, 'users', uid), { status: newStatus });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.UPDATE, 'users');
     }
   };
 
-  const updateUserRole = async (docId: string, newRole: 'user' | 'master') => {
+  const updateUserRole = async (uid: string, newRole: 'user' | 'master') => {
     try {
-      await updateDoc(doc(db, 'users', docId), { role: newRole });
+      await updateDoc(doc(db, 'users', uid), { role: newRole });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.UPDATE, 'users');
     }
   };
 
-  const deleteUser = async (docId: string, userUid?: string) => {
-    if (userUid === user?.uid) {
+  const deleteUser = async (uid: string) => {
+    if (uid === user?.uid) {
       setApiError("Você não pode excluir seu próprio usuário.");
       return;
     }
     try {
-      await deleteDoc(doc(db, 'users', docId));
+      await deleteDoc(doc(db, 'users', uid));
       setUserToDelete(null);
       setConfirmDeleteCheckbox(false);
     } catch (err: any) {
@@ -1727,13 +1725,12 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-        <div className="flex-1 flex flex-col items-center justify-center w-full">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-md w-full text-center"
-          >
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-md w-full text-center"
+        >
           <div className="bg-indigo-600 w-20 h-20 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-indigo-200">
             <Icon name="Wand2" size={40} />
           </div>
@@ -1764,10 +1761,6 @@ export default function App() {
             Câmara Municipal de Curitiba
           </p>
         </motion.div>
-        </div>
-        <div className="w-full">
-          <DiscreetFooter />
-        </div>
       </div>
     );
   }
@@ -1884,7 +1877,7 @@ export default function App() {
               </button>
               <button 
                 disabled={!confirmDeleteCheckbox}
-                onClick={() => userToDelete && deleteUser(userToDelete.id, userToDelete.uid)}
+                onClick={() => deleteUser(userToDelete.uid)}
                 className={`flex-1 px-6 py-3 rounded-xl text-xs font-bold text-white transition-all shadow-lg ${confirmDeleteCheckbox ? 'bg-red-600 hover:bg-red-700 shadow-red-200' : 'bg-slate-300 cursor-not-allowed shadow-none'}`}
               >
                 Sim, Excluir
@@ -2167,13 +2160,12 @@ export default function App() {
 
   if (userStatus === 'pending' || userStatus === 'disabled') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-        <div className="flex-1 flex flex-col items-center justify-center w-full">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-lg w-full text-center"
-          >
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-200 max-w-lg w-full text-center"
+        >
           <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl ${userStatus === 'pending' ? 'bg-orange-50 text-orange-600 shadow-orange-100' : 'bg-red-50 text-red-600 shadow-red-100'}`}>
             <Icon name={userStatus === 'pending' ? "Loader2" : "ShieldCheck"} size={40} className={userStatus === 'pending' ? "animate-spin" : ""} />
           </div>
@@ -2192,10 +2184,6 @@ export default function App() {
             Sair da Conta
           </button>
         </motion.div>
-        </div>
-        <div className="w-full">
-          <DiscreetFooter />
-        </div>
       </div>
     );
   }
@@ -2463,7 +2451,7 @@ export default function App() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="relative">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-slate-400 font-bold text-xs ${u.isDuplicate ? 'bg-amber-100 ring-2 ring-amber-400 ring-offset-2' : 'bg-slate-100'}`}>
+                          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-xs">
                             {u.displayName?.substring(0, 2).toUpperCase() || '??'}
                           </div>
                           <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${isOnline ? 'bg-green-500' : 'bg-slate-300'}`} title={isOnline ? 'Online agora' : 'Offline'} />
@@ -2472,14 +2460,8 @@ export default function App() {
                           <div className="font-bold text-slate-900 flex items-center gap-2">
                             {u.displayName}
                             {isOnline && <span className="text-[8px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Ativo</span>}
-                            {u.isDuplicate && (
-                              <span className="text-[8px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter flex items-center gap-1">
-                                <AlertTriangle size={8} /> Duplicado
-                              </span>
-                            )}
                           </div>
                           <div className="text-xs text-slate-500">{u.email}</div>
-                          {u.isDuplicate && <div className="text-[9px] text-amber-500 font-medium">Múltiplos registros para este e-mail.</div>}
                         </div>
                       </div>
                     </td>
@@ -2494,7 +2476,7 @@ export default function App() {
                   <td className="px-6 py-4">
                     <select 
                       value={u.role}
-                      onChange={(e) => updateUserRole(u.id, e.target.value as any)}
+                      onChange={(e) => updateUserRole(u.uid, e.target.value as any)}
                       className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none"
                     >
                       <option value="user">Servidor</option>
@@ -2505,7 +2487,7 @@ export default function App() {
                     <div className="flex gap-2">
                       {u.status !== 'approved' && (
                         <button 
-                          onClick={() => updateUserStatus(u.id, 'approved')}
+                          onClick={() => updateUserStatus(u.uid, 'approved')}
                           className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-bold hover:bg-green-700 transition-all"
                         >
                           Aprovar
@@ -2513,7 +2495,7 @@ export default function App() {
                       )}
                       {u.status === 'approved' && u.role !== 'master' && (
                         <button 
-                          onClick={() => updateUserStatus(u.id, 'disabled')}
+                          onClick={() => updateUserStatus(u.uid, 'disabled')}
                           className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-100 transition-all"
                         >
                           Desabilitar
@@ -2521,7 +2503,7 @@ export default function App() {
                       )}
                       {u.status === 'disabled' && (
                         <button 
-                          onClick={() => updateUserStatus(u.id, 'approved')}
+                          onClick={() => updateUserStatus(u.uid, 'approved')}
                           className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 transition-all"
                         >
                           Reativar
@@ -2640,7 +2622,7 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50">
       <Modals />
       
       {view === 'dashboard' ? (
@@ -3262,9 +3244,13 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
+          <footer className="mt-8 py-6 text-center no-print border-t border-slate-100">
+            <p className="text-[9px] text-slate-300 font-medium tracking-tight">
+              Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
+            </p>
+          </footer>
         </div>
       )}
-      <DiscreetFooter />
     </div>
   );
 }

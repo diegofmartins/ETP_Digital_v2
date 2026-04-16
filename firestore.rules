@@ -42,38 +42,51 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Default master has absolute authority
     function isDefaultMaster() {
       return isAuthenticated() && 
              request.auth.token.email == "diego.martins@cmc.pr.gov.br" && 
              request.auth.token.email_verified == true;
     }
     
+    // Retrieve user document data
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    // Check if current user is master
     function isMaster() {
       return isDefaultMaster() || (
         isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master'
+        getUserData(request.auth.uid).role == 'master'
       );
     }
     
+    // Check if current user is approved
     function isApproved() {
       return isDefaultMaster() || (
         isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+        getUserData(request.auth.uid).status == 'approved'
       );
     }
 
+    // Comprehensive validation for User document
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'role', 'status']) &&
+      let requiredFields = ['uid', 'email', 'role', 'status'];
+      return data.keys().hasAll(requiredFields) &&
              data.uid is string &&
              data.email is string &&
              data.role in ['user', 'master'] &&
-             data.status in ['pending', 'approved', 'disabled'];
+             data.status in ['pending', 'approved', 'disabled'] &&
+             (!('lastActive' in data) || (data.lastActive == null || data.lastActive is timestamp));
     }
 
+    // Validation for ETP documents
     function isValidETP(data) {
-      return data.keys().hasAll(['userId', 'data', 'status']) &&
+      let requiredFields = ['userId', 'data', 'status'];
+      return data.keys().hasAll(requiredFields) &&
              data.userId is string &&
              data.status in ['draft', 'completed', 'deleted', 'active'] &&
              data.data is map;
@@ -84,11 +97,17 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{uid} {
+      // Users can see their own profile, Master can see all
       allow get: if isAuthenticated() && (isOwner(uid) || isMaster());
-      allow list: if isMaster();
       
-      // New users start as pending, except for the default master email
-      // Master can also create any user (useful for backup restoration)
+      // Allow users to check if their own email exists to prevent duplicates during login
+      allow list: if isMaster() || (
+        isAuthenticated() && 
+        request.query.limit <= 1 && 
+        request.query.filters.email[0] == request.auth.token.email
+      );
+      
+      // New users register as pending/user, unless default master
       allow create: if isAuthenticated() && (
         (isOwner(uid) && isValidUser(request.resource.data) && (
           (request.resource.data.status == 'pending' && request.resource.data.role == 'user') ||
@@ -97,22 +116,36 @@ service cloud.firestore {
         isMaster()
       );
       
-      // Only Master can update status or roles
-      allow update: if isAuthenticated() && 
-                    (isMaster() || (isOwner(uid) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status));
+      // Only Master can change roles/status. Users can update their own data (like presence) 
+      // but MUST not touch their role or status.
+      allow update: if isAuthenticated() && (
+        isMaster() || (
+          isOwner(uid) && 
+          isValidUser(request.resource.data) &&
+          (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
+          (!('status' in request.resource.data) || request.resource.data.status == resource.data.status)
+        )
+      );
       
-      // Only Master can delete users
+      // Strict lockdown on deletions
       allow delete: if isMaster();
     }
 
     match /etps/{etpId} {
-      allow get: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
-      allow list: if isAuthenticated() && (isMaster() || (request.query.filters.userId == request.auth.uid));
+      // Only owner or Master can read
+      // Using resource.data in list rule ensures users can ONLY list their own etps
+      allow get, list: if isAuthenticated() && (isMaster() || resource.data.userId == request.auth.uid);
       
+      // Only approved users can maintain ETPs
       allow create: if (isApproved() || isMaster()) && 
-                    (request.resource.data.userId == request.auth.uid || isMaster());
+                    (request.resource.data.userId == request.auth.uid || isMaster()) &&
+                    isValidETP(request.resource.data);
+                    
       allow update: if (isApproved() || isMaster()) && 
-                    (resource.data.userId == request.auth.uid || isMaster());
+                    (resource.data.userId == request.auth.uid || isMaster()) &&
+                    isValidETP(request.resource.data) &&
+                    request.resource.data.userId == resource.data.userId; // userId is immutable
+                    
       allow delete: if (isApproved() || isMaster()) && (resource.data.userId == request.auth.uid || isMaster());
     }
   }
