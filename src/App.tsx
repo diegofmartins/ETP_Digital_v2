@@ -353,13 +353,13 @@ const structure: ETPStructureItem[] = [
   },
   { id: 'tabela_estimativa_quantitativos_precos', label: 'Tabela de Estimativa de Quantitativos e Preços', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Apresente uma tabela detalhada com os itens, especificações, quantidades e preços estimados. A tabela deve permitir a clara identificação de cada item e a composição do valor total da contratação.' },
   { id: 'justificativa_parcelamento', label: '9. JUSTIFICATIVAS PARA O PARCELAMENTO OU NÃO DA CONTRATAÇÃO (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'A regra a ser observada pela Administração nas licitações é a do parcelamento do objeto, conforme disposto na alínea b do inciso V do art. 40 e art. 47, §1º, ambos da Lei nº 14.133/2021, mas é imprescindível que a divisão do objeto seja técnica e economicamente viável e não represente perda de economia de escala.\nA lei prioriza o parcelamento de contratações para aumentar a competição e obter melhores preços, permitindo a participação de mais empresas. A contratação não parcelada (em lote) deve ser justificada, como interligação de itens ou economia de escala. Não parcelar exige fundamentação.\nSe a solução for divisível, deve-se analisar a viabilidade técnica e a vantajosidade econômica do parcelamento para fins de contratação, e fundamentar a decisão no ETP.\n    • Havendo o parcelamento da solução, a licitação será realizada por item se o objeto for divisível e tal decisão.\n    • Havendo o não parcelamento da solução de objeto divisível, a licitação será realizada por lotes ou por lote único. A justificativa para o não parcelamento deve trazer elementos que demonstrem que haveria prejuízo ao conjunto ou à perda de economia de escala se adotada decisão em sentido contrário.\nExistem situações em que o parcelamento pode ser inviável ou desvantajoso. Por exemplo, quando há perda de economia de escala e a divisão em mais de um certame resulta em aumento dos custos globais da contratação. Outra situação é quando os benefícios do parcelamento não compensam o aumento do custo e das dificuldades administrativas da gestão contratual. Além disso, o parcelamento pode descaracterizar ou prejudicar o objeto da contratação, ou ser necessário contratar um fornecedor único para padronização. Especificamente para serviços, o parcelamento pode levar à perda da responsabilidade técnica devido à pluralidade de prestadores.' },
-  { id: 'resultados_pretendidos', label: '10. DEMONSTRATIVO DOS RESULTADOS PRETENDIDOS', icon: 'CheckCircle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Demonstrar os benefícios e melhorias esperados ("antes e depois"). Pode ser em termos de economicidade, eficácia, eficiência, melhor aproveitamento de recursos ou impactos ambientais positivos. Devem ser definidos indicadores de desempenho para avaliar se os resultados foram alcançados após a execução do contrato.' },
-  { id: 'providencias_adm', label: '11. PROVIDÊNCIAS A SEREM ADOTADAS PELA ADMINISTRAÇÃO', icon: 'Settings', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Medidas que a Administração precisa tomar para viabilizar a execução (infraestrutura, elétrica, climatização, espaço físico, capacitação, etc.). Devem ser concluídas antes do início do contrato. O descumprimento dessas providências pode acarretar atrasos na execução e prejuízos à Administração.' },
-  { id: 'contratacoes_correlatas', label: '12. CONTRATAÇÕES CORRELATAS E/OU INTERDEPENDENTES', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Mapear o ecossistema da necessidade: contratações Interdependentes (essenciais para o funcionamento) e Correlatas (relacionadas). Identificar impactos entre as soluções e garantir que os cronogramas estejam alinhados para evitar ociosidade de recursos ou interrupção de serviços.' },
-  { id: 'impactos_ambientais', label: '13. DESCRIÇÃO DE POSSÍVEIS IMPACTOS AMBIENTAIS E RESPECTIVAS MEDIDAS MITIGADORAS', icon: 'Leaf', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar possíveis impactos ambientais e medidas mitigadoras, considerando todo o ciclo de vida do objeto. O desenvolvimento sustentável é um princípio da Lei 14.133/2021. Devem ser observadas as normas de descarte de resíduos, eficiência energética e uso racional de recursos naturais.' },
-  { id: 'alinhamento_planejamento', label: '14. ALINHAMENTO ENTRE A CONTRATAÇÃO E O PLANEJAMENTO DA CÂMARA MUNICIPAL DE CURITIBA', icon: 'Target', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Demonstrar que a contratação está de acordo com o Plano de Contratações Anual (PCA) e o Planejamento Estratégico da CMC, provando que não é um ato isolado. Deve-se indicar o item específico do PCA ao qual a contratação se refere.' },
-  { id: 'posicionamento_conclusivo', label: '15. POSICIONAMENTO CONCLUSIVO SOBRE A ADEQUAÇÃO DA CONTRATAÇÃO PARA O ATENDIMENTO DA NECESSIDADE A QUE SE DESTINA (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'ShieldCheck', section: 'IV - POSICIONAMENTO CONCLUSIVO', isAiEnabled: true, helpText: 'Concluir sobre a viabilidade técnica e econômica da contratação. Verificar se a necessidade é clara, se o objeto é legal e se os benefícios compensam os custos. O posicionamento deve ser fundamentado em todos os elementos analisados no ETP.' },
-  { id: 'analise_riscos_resumo', label: '16. ANÁLISE DE RISCOS QUE POSSAM COMPROMETER O SUCESSO DA LICITAÇÃO (OBRIGATÓRIO - art. 18º, inc. X, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Registrar riscos que possam comprometer a licitação ou o contrato (processo licitatório, providências prévias, gestão contratual) e propor medidas de tratamento/mitigação. A análise deve considerar a probabilidade de ocorrência e o impacto de cada risco.' },
+  { id: 'resultados_pretendidos', label: '10. DEMONSTRATIVO DOS RESULTADOS PRETENDIDOS', icon: 'CheckCircle', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Responder de forma clara à pergunta: “O que nós ganhamos com essa contratação?". O objetivo é demonstrar os benefícios e as melhorias que a CMC espera alcançar. É a seção do "antes e depois": antes, tínhamos um problema; depois da contratação, esperamos ter estes resultados positivos.\nOs benefícios diretos e indiretos que o órgão almeja com a contratação podem ser em termos de economicidade, eficácia, eficiência, melhor aproveitamento de recursos humanos, materiais e financeiros disponíveis, inclusive com respeito a impactos ambientais positivos e melhoria da qualidade de produtos ou serviços oferecidos à sociedade.\nNo caso da contratação de serviços, poderá ser elaborado o Instrumento de Medição de Resultados (IMR) ou instrumento substituto, se for o caso, que deverá constar como anexo dos Estudos Preliminares (IN SEGES/MP nº 05/2017, Anexos V-B e VIII-A).\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).' },
+  { id: 'providencias_adm', label: '11. PROVIDÊNCIAS A SEREM ADOTADAS PELA ADMINISTRAÇÃO', icon: 'Settings', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Trata-se das medidas que a Administração precisa tomar para viabilizar a execução contratual. Essas medidas devem ser descritas no ETP, a fim de que sejam concluídas antes de iniciada a execução do contrato. Os custos das providências devem ser considerados na análise que determina a solução que será escolhida.\nAs providências podem contemplar mudanças relacionadas a:\n    • Infraestrutura tecnológica, como, por exemplo, aumento de processamento de dados;\n    • Infraestrutura elétrica, a exemplo do aumento de cabeamento ou substituição de disjuntores no quadro elétrico para suportar o funcionamento de novos equipamentos ou o aumento de potência exigida por maior número de usuários;\n    • Climatização de ambientes para alocação de equipamentos;\n    • Adequação de espaço físico para implantação da solução ou para que a equipe contratada opere dentro da organização;\n    • Fornecimento de materiais previstos para a execução contratual;\n    • Estrutura organizacional, podendo haver necessidade de modificar departamentos, extinguir alguns e/ou criar outros, bem como editar normativos internos;\n    • Processos de trabalho da organização, como os de segurança da informação, de segurança institucional, de gestão documental e de gestão de riscos. As mudanças devem ser claramente comunicadas e deve ser avaliada a necessidade de treinar os envolvidos nos processos;\n    • Adequação do consumo de materiais e serviços já prestados dentro da organização, como, por exemplo, limpeza, estacionamento, copa, restaurante, telefonia, água, café, manutenção predial;\n    • Obtenção de alvarás, licenças, outorgas, autorizações e outras exigências legais e infralegais;\n    • Capacitação de colaboradores da organização, inclusive para a gestão contratual; e de funcionários do contrato para a adaptação ao ambiente do órgão ou entidade.\nCaso seja necessária a adequação do ambiente da organização para que a contratação surta seus efeitos, cumpre elaborar cronograma com todas as atividades necessárias para tal e com indicação dos responsáveis por esses ajustes.\nEm havendo necessidade de ajustes, o cronograma deverá ser juntado ao processo e esta atuação prévia deve ser incluída no Mapa de Riscos como um fator de risco ao sucesso da contratação caso não seja implementada a tempo.\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).' },
+  { id: 'contratacoes_correlatas', label: '12. CONTRATAÇÕES CORRELATAS E/OU INTERDEPENDENTES', icon: 'Layout', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Identificar outras contratações que estão "amarradas" à que você está planejando. O objetivo é mapear o ecossistema da sua necessidade para evitar surpresas. Existem dois tipos: Interdependentes (essenciais para que a sua contratação principal funcione) e Correlatas (relacionadas, mas não essenciais).\nidentifica as contratações planejadas, em andamento ou já realizadas pela organização que possam impactar a solução escolhida ou serem por ela impactadas. Objetiva o tratamento integrado das contratações. Por exemplo, no levantamento de providências para ajuste de infraestrutura que a organização terá que fazer para implementar determinada solução, a área demandante poderá identificar contratações já realizadas ou planejadas que suprem esses ajustes.\nAs contratações correlatas tratam de objetos similares ou complementares aos que serão demandados pela nova solução. A análise deverá considerar, por exemplo, a possibilidade de agregar objetos semelhantes, com vistas à economia de escala ou à padronização; e a necessidade de substituir contratos vigentes prevendo período para a transição contratual.\nNo caso de serviços ou fornecimentos contínuos, é fundamental realizar uma transição contratual adequada para garantir a continuidade da prestação.\nAs contratações interdependentes são aquelas que são pré-requisitos para o sucesso da nova solução, ou contratações cujo sucesso depende da solução ora examinada. Para o outsourcing de impressão, por exemplo, será necessário o fornecimento de papel e de mobiliário para acomodação dos equipamentos e guarda de consumíveis; para o serviço de segurança patrimonial eletrônica, deverá haver o fornecimento de conexão à internet via cabo para as câmeras de vigilância e a aquisição e manutenção de aparelhos de ar-condicionado para os ambientes em que ficarão os servidores e demais equipamentos de armazenamento de dados de segurança patrimonial.\nO resultado da análise das contratações correlatas e/ou interdependentes pode influenciar não somente o quantitativo pretendido, como os requisitos técnicos e até a escolha da própria solução.\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).' },
+  { id: 'impactos_ambientais', label: '13. DESCRIÇÃO DE POSSÍVEIS IMPACTOS AMBIENTAIS E RESPECTIVAS MEDIDAS MITIGADORAS', icon: 'Leaf', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Indicar os possíveis impactos ambientais gerados pela contratação e as respectivas medidas de tratamento ou de mitigação para minimizá-los.\nO desenvolvimento nacional sustentável é um dos princípios a observar na aplicação da Lei 14.133/2021 e um dos objetivos do processo licitatório. Apresenta três dimensões principais: econômica, social e ambiental.\nA questão ambiental assume especial importância na elaboração do ETP, pois é nele que devem ser descritos os possíveis impactos ambientais do objeto a ser contratado, bem como as medidas que poderão ser tomadas para minimizá-los.\nA análise dos possíveis impactos ambientais deve considerar todo o ciclo de vida do objeto a ser contratado, pois uma solução inicialmente mais onerosa poderá mostrar-se mais vantajosa ao longo do tempo. Além disso, é importante considerar a logística reversa para a reciclagem e descarte adequado de bens e resíduos.\nPara obras e demais empreendimentos potencialmente poluidores do meio ambiente, as Resoluções - CONAMA 1/1986 e 237/1997 devem ser consultadas, pois dispõem, respectivamente, sobre critérios básicos e diretrizes gerais para a avaliação de impacto ambiental, trazendo, inclusive, o rol de empreendimentos cujo licenciamento ambiental é obrigatório, e procedimentos para o licenciamento ambiental.\nOs critérios de sustentabilidade deverão ser incluídos também nos requisitos da contratação. É importante que a área demandante pesquise se existem normativos que estabeleçam regras específicas de sustentabilidade para o objeto a ser contratado, evitando critérios genéricos.\nAssim, a análise dos possíveis impactos ambientais pode influenciar a escolha da solução contratada. A opção escolhida deve equilibrar as três dimensões da sustentabilidade - social, econômica e ambiental. Isso significa que os impactos ambientais devem ser comparados aos impactos sociais e aos custos das possíveis alternativas para se chegar a uma solução com maior equilíbrio entre essas três dimensões.\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).' },
+  { id: 'alinhamento_planejamento', label: '14. ALINHAMENTO ENTRE A CONTRATAÇÃO E O PLANEJAMENTO DA CÂMARA MUNICIPAL DE CURITIBA', icon: 'Target', section: 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', isAiEnabled: true, helpText: 'Demonstrar que a contratação que está sendo planejada não é um ato isolado ou de última hora, mas sim uma ação que foi previamente planejada e está de acordo com os objetivos maiores da CMC. O Plano de Contratações Anual (PCA) é, de forma simples, a "lista de compras e serviços" que a Câmara se programa para contratar durante o ano. Indicar que a sua demanda está no PCA prova que ela faz parte do planejamento. O alinhamento ao Planejamento Estratégico, por sua vez, mostra como essa contratação específica ajuda a CMC a alcançar suas metas de longo prazo.\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).' },
+  { id: 'posicionamento_conclusivo', label: '15. POSICIONAMENTO CONCLUSIVO SOBRE A ADEQUAÇÃO DA CONTRATAÇÃO PARA O ATENDIMENTO DA NECESSIDADE A QUE SE DESTINA (OBRIGATÓRIO - art. 18º, §2º, da Lei nº 14.133/2021)', icon: 'ShieldCheck', section: 'IV - POSICIONAMENTO CONCLUSIVO', isAiEnabled: true, helpText: 'A partir das informações levantadas no ETP, a área demandante conclui sobre a adequação da contratação para o atendimento da necessidade a que se destina, que inclui, de forma fundamentada, a avaliação se a contratação é ou não viável técnica e economicamente.\nDeve-se propor pelo prosseguimento ou pela desistência da contratação “antes que investimentos maiores sejam feitos”.\nAlém de verificar se todos os itens do ETP estão adequados e coerentes, a análise de viabilidade deve avaliar se:\n    • A necessidade da Administração é clara e pertinente, e a solução escolhida é a mais adequada para atendê-la;\n    • A contratação da solução ou de partes delas é necessária e oportuna;\n    • O objeto pode ser legalmente contratado;\n    • Os benefícios potenciais da contratação compensam os custos estimados para o contratante.\nSe a contratação for viável técnica e economicamente, a equipe de planejamento prosseguirá com as demais etapas de planejamento da contratação, elaborando o termo de referência (ou nortear o desenvolvimento ou contratação do projeto básico, ou anteprojeto), para subsequente elaboração do edital ou do instrumento de contratação direta.' },
+  { id: 'analise_riscos_resumo', label: '16. ANÁLISE DE RISCOS QUE POSSAM COMPROMETER O SUCESSO DA LICITAÇÃO (OBRIGATÓRIO - art. 18º, inc. X, da Lei nº 14.133/2021)', icon: 'AlertTriangle', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Há riscos relevantes da contratação que precisarão ser registrados durante o processo de planejamento e gerenciados ao longo dos processos de seleção do fornecedor e de gestão do contrato.\nEsses riscos podem estar relacionados ao processo licitatório (ou ao processo de contratação direta), às providências a serem adotadas pela Administração antes da celebração do contrato, à gestão do futuro contrato, ou aos resultados pretendidos com a contratação.\nAssim, a gestão de riscos da contratação poderá ser formalizada por um MAPA DE RISCOS.\nIdentificada a melhor solução a ser contratada, deve-se retirá-la do ambiente abstrato, que somente enxerga as condições ideais de execução, e identificar quais circunstâncias supervenientes podem prejudicar o desenvolvimento da licitação e o alcance dos fins pretendidos com a contratação.\nEssas ocorrências, que poderão ser de natureza institucional, de mercado, ambiente físico, econômicas, entre outras, são chamadas de riscos, e devem ser identificadas com base tanto na experiência acumulada pela Administração, no desempenho da sua atividade contratual, como também em normas técnicas ou outros documentos que, eventualmente, se ocupem de identificar riscos no segmento de mercado em que se insere a contratação.\nPortanto, para cada risco, define-se a probabilidade dos possíveis e potenciais danos ao erário\nTrata-se, em última análise, de uma oportunidade para a Administração – sobretudo tendo em vista os registros históricos de suas licitações e contratações – se antecipar a ocorrência de problemas que possam frustrar os objetivos da licitação e da contratação e definir ações de prevenção e contingenciamento para assegurar os resultados mínimos para sua atuação.\nFrisa-se que o MAPA DE RISCOS não deve ser confundido com a MATRIZ DE RISCOS prevista na Lei 14.133/2021, pois tal matriz é uma cláusula contratual que tem por objetivo alocar às partes (contratante e contratada) as responsabilidades pelos riscos relacionados a eventos supervenientes à contratação.\nO eventual não preenchimento deste campo deverá ser justificado (art. 18, §2º, parte final da Lei nº 14.133/2021).' },
   { id: 'tabela_riscos_interna', label: 'Anexo I - Riscos Fase Interna', icon: 'Layout', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Tabela detalhada dos riscos identificados na fase interna do processo, incluindo descrição, impacto, probabilidade e medidas de mitigação.' },
   { id: 'tabela_riscos_externa', label: 'Anexo I - Riscos Fase Externa', icon: 'Layout', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Tabela detalhada dos riscos identificados na fase externa do processo, incluindo descrição, impacto, probabilidade e medidas de mitigação.' },
   { id: 'fotos', label: 'Fotos e Ilustrações do Objeto', icon: 'Eye', section: 'VI - ANEXOS FOTOGRÁFICOS', isAiEnabled: false, helpText: 'Anexe fotos ou ilustrações que ajudem a identificar e descrever o objeto da contratação. As imagens devem ser nítidas e acompanhadas de legendas explicativas.' },
@@ -486,6 +486,9 @@ export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<'user' | 'master'>('user');
   const [userStatus, setUserStatus] = useState<'pending' | 'approved' | 'disabled'>('pending');
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean>(false);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [welcomeCheckbox, setWelcomeCheckbox] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -518,7 +521,10 @@ export default function App() {
   const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
 
   const sortedDrafts = useMemo(() => {
-    const sorted = [...drafts].sort((a, b) => {
+    // Deduplicate by ID
+    const uniqueDrafts = Array.from(new Map(drafts.map(d => [d.id, d])).values());
+    
+    const sorted = uniqueDrafts.sort((a, b) => {
       let aValue = a[etpSort.key];
       let bValue = b[etpSort.key];
 
@@ -534,7 +540,10 @@ export default function App() {
   }, [drafts, etpSort]);
 
   const sortedUsers = useMemo(() => {
-    const sorted = [...allUsers].sort((a, b) => {
+    // Deduplicate by UID
+    const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.uid || u.id, u])).values());
+    
+    const sorted = uniqueUsers.sort((a, b) => {
       let aValue = a[userSort.key];
       let bValue = b[userSort.key];
 
@@ -599,19 +608,53 @@ export default function App() {
           const data = userSnap.data();
           setUserRole(data.role);
           setUserStatus(data.status);
+          setHasAcceptedTerms(!!data.hasAcceptedTerms);
+          
+          // Show welcome popup if approved but hasn't accepted terms yet
+          if (data.status === 'approved' && !data.hasAcceptedTerms) {
+            setShowWelcomePopup(true);
+          }
+          
           await updateDoc(userRef, { lastActive: serverTimestamp() });
         } else {
-          const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
-          const role = isMasterEmail ? 'master' : 'user';
-          const status = isMasterEmail ? 'approved' : 'pending';
-          await setDoc(userRef, {
-            ...userData,
-            role: role,
-            status: status,
-            createdAt: serverTimestamp()
-          });
-          setUserRole(role);
-          setUserStatus(status);
+          // Check if user already exists by email to prevent duplication
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where('email', '==', u.email));
+          const querySnap = await getDocs(q);
+          
+          if (!querySnap.empty) {
+            // User exists with different UID or same email, link them
+            const existingUserDoc = querySnap.docs[0];
+            const data = existingUserDoc.data();
+            setUserRole(data.role);
+            setUserStatus(data.status);
+            setHasAcceptedTerms(!!data.hasAcceptedTerms);
+            
+            if (data.status === 'approved' && !data.hasAcceptedTerms) {
+              setShowWelcomePopup(true);
+            }
+            
+            // Update the existing document with the current UID if it's different
+            // or just update lastActive
+            await updateDoc(existingUserDoc.ref, { 
+              lastActive: serverTimestamp(),
+              uid: u.uid // Ensure UID is correct
+            });
+          } else {
+            const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
+            const role = isMasterEmail ? 'master' : 'user';
+            const status = isMasterEmail ? 'approved' : 'pending';
+            await setDoc(userRef, {
+              ...userData,
+              role: role,
+              status: status,
+              hasAcceptedTerms: false,
+              createdAt: serverTimestamp()
+            });
+            setUserRole(role);
+            setUserStatus(status);
+            setHasAcceptedTerms(false);
+          }
         }
       }
       setIsAuthReady(true);
@@ -703,7 +746,7 @@ export default function App() {
     });
   }, [user, userRole, userStatus, view]);
 
-  const pendingUsersCount = allUsers.filter(u => u.status === 'pending').length;
+  const pendingUsersCount = sortedUsers.filter(u => u.status === 'pending').length;
 
   const handleLogin = async () => {
     if (isLoggingIn) return;
@@ -1010,6 +1053,24 @@ export default function App() {
       console.error("Erro na importação:", err);
       setApiError("Erro ao importar backup: " + (err.message || "Erro desconhecido"));
       setImportProgress(null);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAcceptTerms = async () => {
+    if (!user || !welcomeCheckbox) return;
+    setIsSaving(true);
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { 
+        hasAcceptedTerms: true,
+        acceptedTermsAt: serverTimestamp()
+      });
+      setHasAcceptedTerms(true);
+      setShowWelcomePopup(false);
+    } catch (err: any) {
+      setApiError("Erro ao salvar termo de ciência: " + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -1750,6 +1811,86 @@ export default function App() {
         </div>
       )}
 
+      {/* Welcome Disclaimer Popup */}
+      {showWelcomePopup && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4 overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="bg-white rounded-[40px] p-8 md:p-12 max-w-2xl w-full shadow-2xl border border-slate-100 my-8"
+          >
+            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-8 shadow-lg shadow-indigo-100 mx-auto">
+              <Icon name="Sparkles" size={40} />
+            </div>
+            
+            <h2 className="text-3xl font-black text-slate-900 text-center mb-6 tracking-tight">
+              Bem-vindo ao Assistente de ETP!
+            </h2>
+            
+            <div className="bg-slate-50 rounded-3xl p-6 md:p-8 mb-8 border border-slate-100">
+              <div className="text-slate-600 text-sm leading-relaxed space-y-4">
+                <p>
+                  Eu sou o <strong>Diego Martins</strong>, aqui da Diretoria de Contratações. Desenvolvi esta ferramenta para tentar facilitar nossa vida na elaboração dos Estudos Técnicos Preliminares, automatizando aquela parte mais "braçal" do texto.
+                </p>
+                <p>
+                  Como sou eu que estou tocando esse projeto sozinho e ainda estamos em fase de testes (Beta), preciso combinar alguns pontos importantes com você:
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex gap-3">
+                    <span className="text-indigo-600 font-bold">•</span>
+                    <span><strong>A IA pode falhar:</strong> Por mais que o modelo seja treinado, ele pode gerar interpretações equivocadas ou dados imprecisos.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-indigo-600 font-bold">•</span>
+                    <span><strong>A responsabilidade é humana:</strong> Este sistema é um auxiliar, não um substituto. O conteúdo gerado deve ser revisado e validado por você antes de qualquer prosseguimento oficial.</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-indigo-600 font-bold">•</span>
+                    <span><strong>Conformidade Legal:</strong> Verifique se a solução sugerida atende plenamente ao interesse público e se as justificativas de viabilidade técnica e econômica estão coerentes com a realidade da sua demanda.</span>
+                  </li>
+                </ul>
+                <p className="pt-2 font-medium italic text-slate-500">
+                  Use a ferramenta para ganhar tempo e estruturar suas ideias, mas mantenha sempre o olhar crítico de quem assina o documento.
+                </p>
+                <p className="font-bold text-indigo-600">
+                  Conto com seu feedback para continuarmos melhorando nossos processos!
+                </p>
+              </div>
+            </div>
+
+            <label className="flex items-start gap-4 p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100 mb-8 cursor-pointer hover:bg-indigo-50 transition-colors group">
+              <div className="pt-1">
+                <input 
+                  type="checkbox" 
+                  checked={welcomeCheckbox}
+                  onChange={(e) => setWelcomeCheckbox(e.target.checked)}
+                  className="w-6 h-6 rounded-lg border-indigo-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer"
+                />
+              </div>
+              <span className="text-sm font-bold text-indigo-900 leading-tight">
+                Estou ciente de que se trata de uma ferramenta em testes e me comprometo com a validação de todas as respostas geradas pela inteligência artificial.
+              </span>
+            </label>
+
+            <button 
+              disabled={!welcomeCheckbox || isSaving}
+              onClick={handleAcceptTerms}
+              className={`w-full py-5 rounded-2xl text-lg font-black transition-all shadow-xl flex items-center justify-center gap-3 ${
+                welcomeCheckbox && !isSaving
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200' 
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+              }`}
+            >
+              {isSaving ? (
+                <Icon name="Loader2" className="animate-spin" />
+              ) : (
+                <>Começar a usar <Icon name="ArrowRight" size={20} /></>
+              )}
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       {/* Backup Import Confirmation Modal */}
       {backupToImport && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
@@ -1973,7 +2114,7 @@ export default function App() {
             <button onClick={createNewETP} className="text-indigo-600 text-sm font-bold mt-2 hover:underline">Começar meu primeiro ETP</button>
           </div>
         ) : (
-          drafts.map(draft => (
+          sortedDrafts.map(draft => (
             <motion.div 
               key={draft.id}
               whileHover={{ y: -5 }}
