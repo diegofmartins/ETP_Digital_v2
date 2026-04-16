@@ -523,6 +523,7 @@ export default function App() {
   const [backupToImport, setBackupToImport] = useState<any | null>(null);
   const [etpSort, setEtpSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
   const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
+  const [reassignState, setReassignState] = useState<{ draftId: string, currentEmail: string, title: string } | null>(null);
 
   const sortedDrafts = useMemo(() => {
     // Deduplicate by ID
@@ -544,8 +545,8 @@ export default function App() {
   }, [drafts, etpSort]);
 
   const sortedUsers = useMemo(() => {
-    // Deduplicate by UID
-    const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.uid || u.id, u])).values());
+    // Deduplicate by ID (Firestore doc ID) which is always unique in a query result
+    const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
     
     const sorted = uniqueUsers.sort((a, b) => {
       let aValue = a[userSort.key];
@@ -965,6 +966,40 @@ export default function App() {
       await deleteDoc(doc(db, 'etps', id));
     } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, 'etps');
+    }
+  };
+
+  const reassignDraft = async (draftId: string, newEmail: string) => {
+    if (!newEmail || !newEmail.includes('@')) {
+      setApiError("E-mail inválido.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      // Find user by email to get UID
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', newEmail.trim().toLowerCase()), limit(1));
+      const querySnap = await getDocs(q);
+      
+      if (querySnap.empty) {
+        setApiError("Usuário não encontrado com este e-mail. O usuário precisa ter logado pelo menos uma vez no sistema.");
+        setIsSaving(false);
+        return;
+      }
+      
+      const newUid = querySnap.docs[0].id; // Use current document ID as UID
+      
+      // Update both userId and userEmail to match schema in saveDraft
+      await updateDoc(doc(db, 'etps', draftId), {
+        userId: newUid,
+        userEmail: newEmail.trim().toLowerCase()
+      });
+      
+      setReassignState(null);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.UPDATE, 'etps');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1768,8 +1803,9 @@ export default function App() {
   const Modals = () => (
     <AnimatePresence>
       {showGlobalConfirm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div key="modal-confirm-overlay" className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div 
+            key="global-confirm-content"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -1806,9 +1842,62 @@ export default function App() {
         </div>
       )}
 
-      {deleteConfirmId && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      {reassignState && (
+        <div key="modal-reassign-overlay" className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div 
+            key="reassign-modal-content"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-200 relative"
+          >
+            <button onClick={() => setReassignState(null)} className="absolute top-6 right-6 p-2 text-slate-300 hover:text-slate-600 transition-colors">
+              <Icon name="X" size={20} />
+            </button>
+            <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+              <Icon name="ShieldCheck" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Reatribuir Autor</h3>
+            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+              Transfira a propriedade do ETP <span className="font-bold text-slate-900">"{reassignState.title}"</span> para outro servidor.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">E-mail do Novo Autor</label>
+                <input 
+                  type="email" 
+                  id="newAuthorEmail"
+                  placeholder="exemplo@cmc.pr.gov.br"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:border-indigo-600 transition-all outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      reassignDraft(reassignState.draftId, (e.target as HTMLInputElement).value);
+                    }
+                  }}
+                />
+              </div>
+              
+              <button 
+                onClick={() => {
+                  const input = document.getElementById('newAuthorEmail') as HTMLInputElement;
+                  reassignDraft(reassignState.draftId, input.value);
+                }}
+                disabled={isSaving}
+                className="w-full py-4 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 size={16} className="animate-spin text-white" /> : <Icon name="Check" size={16} />} 
+                Confirmar Transferência
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div key="modal-delete-overlay" className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            key="delete-confirm-content"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -1840,8 +1929,9 @@ export default function App() {
       )}
 
       {userToDelete && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div key="modal-user-delete-overlay" className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div 
+            key="user-delete-modal-content"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -2391,6 +2481,13 @@ export default function App() {
                         <Icon name="Eye" size={16} />
                         <span className="text-[10px] font-bold uppercase">Visualizar</span>
                       </button>
+                      <button 
+                        onClick={() => setReassignState({ draftId: draft.id, currentEmail: draft.userEmail || '', title: draft.title || '' })}
+                        className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                        title="Reatribuir Autor"
+                      >
+                        <Icon name="Settings" size={16} />
+                      </button>
                       <button onClick={() => setDeleteConfirmId(draft.id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
                         <Icon name="Trash2" size={16} />
                       </button>
@@ -2447,7 +2544,7 @@ export default function App() {
                 const isOnline = u.lastActive && (Date.now() - u.lastActive.toMillis() < 300000); // 5 minutes threshold
                 
                 return (
-                  <tr key={u.uid || u.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="relative">
@@ -2476,7 +2573,7 @@ export default function App() {
                   <td className="px-6 py-4">
                     <select 
                       value={u.role}
-                      onChange={(e) => updateUserRole(u.uid, e.target.value as any)}
+                      onChange={(e) => updateUserRole(u.id, e.target.value as any)}
                       className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none"
                     >
                       <option value="user">Servidor</option>
@@ -2487,7 +2584,7 @@ export default function App() {
                     <div className="flex gap-2">
                       {u.status !== 'approved' && (
                         <button 
-                          onClick={() => updateUserStatus(u.uid, 'approved')}
+                          onClick={() => updateUserStatus(u.id, 'approved')}
                           className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-bold hover:bg-green-700 transition-all"
                         >
                           Aprovar
@@ -2495,7 +2592,7 @@ export default function App() {
                       )}
                       {u.status === 'approved' && u.role !== 'master' && (
                         <button 
-                          onClick={() => updateUserStatus(u.uid, 'disabled')}
+                          onClick={() => updateUserStatus(u.id, 'disabled')}
                           className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-100 transition-all"
                         >
                           Desabilitar
@@ -2503,7 +2600,7 @@ export default function App() {
                       )}
                       {u.status === 'disabled' && (
                         <button 
-                          onClick={() => updateUserStatus(u.uid, 'approved')}
+                          onClick={() => updateUserStatus(u.id, 'approved')}
                           className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 transition-all"
                         >
                           Reativar
@@ -2919,7 +3016,7 @@ export default function App() {
                           <div className="text-center space-y-4">
                             <div className="flex justify-center gap-2">
                               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                                <div key={i} className={`w-3 h-3 rounded-full transition-all ${String(formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData] || '').length > 10 ? 'bg-green-500 scale-110' : 'bg-slate-200'}`} />
+                                <div key={`dot-${i}`} className={`w-3 h-3 rounded-full transition-all ${String(formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData] || '').length > 10 ? 'bg-green-500 scale-110' : 'bg-slate-200'}`} />
                               ))}
                             </div>
                             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Complete o diagnóstico para prosseguir</p>

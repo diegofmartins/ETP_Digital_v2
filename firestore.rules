@@ -76,10 +76,12 @@ service cloud.firestore {
     function isValidUser(data) {
       let requiredFields = ['uid', 'email', 'role', 'status'];
       return data.keys().hasAll(requiredFields) &&
-             data.uid is string &&
-             data.email is string &&
+             data.uid is string && data.uid.size() < 128 &&
+             data.email is string && data.email.size() < 256 &&
              data.role in ['user', 'master'] &&
              data.status in ['pending', 'approved', 'disabled'] &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 128)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1024)) &&
              (!('lastActive' in data) || (data.lastActive == null || data.lastActive is timestamp));
     }
 
@@ -87,9 +89,12 @@ service cloud.firestore {
     function isValidETP(data) {
       let requiredFields = ['userId', 'data', 'status'];
       return data.keys().hasAll(requiredFields) &&
-             data.userId is string &&
+             data.userId is string && data.userId.size() < 128 &&
              data.status in ['draft', 'completed', 'deleted', 'active'] &&
-             data.data is map;
+             data.data is map &&
+             data.data.keys().size() < 100 && // Limit number of fields in ETP data
+             (!('title' in data) || (data.title is string && data.title.size() < 512)) &&
+             (!('userEmail' in data) || (data.userEmail is string && data.userEmail.size() < 256));
     }
 
     // ===============================================================
@@ -144,7 +149,7 @@ service cloud.firestore {
       allow update: if (isApproved() || isMaster()) && 
                     (resource.data.userId == request.auth.uid || isMaster()) &&
                     isValidETP(request.resource.data) &&
-                    request.resource.data.userId == resource.data.userId; // userId is immutable
+                    (request.resource.data.userId == resource.data.userId || isMaster()); // Master can reassign
                     
       allow delete: if (isApproved() || isMaster()) && (resource.data.userId == request.auth.uid || isMaster());
     }
