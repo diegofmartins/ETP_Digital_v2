@@ -13,7 +13,7 @@ import { saveAs } from "file-saver";
 import JoditEditor from 'jodit-react';
 
 import { auth, db, googleProvider, OperationType, handleFirestoreError } from "./firebase";
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser, browserPopupRedirectResolver } from "firebase/auth";
 import { collection, query, where, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, getDoc, addDoc, limit, getDocs } from "firebase/firestore";
 
 const SYSTEM_PROMPT = `Você é um Especialista em Contratações Públicas da Câmara Municipal de Curitiba (CMC), com profundo conhecimento da Lei 14.133/2021.
@@ -761,16 +761,23 @@ export default function App() {
 
   const pendingUsersCount = sortedUsers.filter(u => u.status === 'pending').length;
 
-  const handleLogin = async () => {
+  const handleLogin = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     setApiError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      // Explicitly using browserPopupRedirectResolver helps with "Pending promise was never set" error
+      // in certain environments like iframes or restricted browsers.
+      await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
     } catch (err: any) {
+      console.error("Login error:", err);
       // Ignore "auth/cancelled-popup-request" which happens if user clicks again or closes popup
       if (err.code !== 'auth/cancelled-popup-request' && err.code !== 'auth/popup-closed-by-user') {
-        setApiError("Erro ao fazer login: " + err.message);
+        setApiError("Erro ao fazer login: " + (err.code || err.message));
       }
     } finally {
       setIsLoggingIn(false);
@@ -1686,7 +1693,7 @@ export default function App() {
           )}
 
           <button 
-            onClick={handleLogin}
+            onClick={(e) => handleLogin(e)}
             disabled={isLoggingIn}
             className={`w-full bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-sm ${isLoggingIn ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
@@ -3184,6 +3191,11 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
+          <footer className="mt-8 py-6 text-center no-print border-t border-slate-100">
+            <p className="text-[9px] text-slate-300 font-medium tracking-tight">
+              Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
+            </p>
+          </footer>
         </div>
       )}
     </div>
