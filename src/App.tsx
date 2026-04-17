@@ -527,7 +527,7 @@ const INITIAL_STATE: ETPData = {
   include_riscos_interna: false,
   include_riscos_externa: false,
   fotos: '',
-  data_documento: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }),
+  data_documento: new Date().toISOString().split('T')[0],
   assinaturas: '',
   status: 'in_progress',
   _version: 2,
@@ -541,6 +541,17 @@ const base64ToUint8Array = (base64: string) => {
     bytes[i] = binaryString.charCodeAt(i);
   }
   return bytes;
+};
+
+const formatDateLong = (isoDate: string) => {
+  if (!isoDate) return '____ de ____________ de 202_.';
+  try {
+    const [year, month, day] = isoDate.split('-');
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  } catch (e) {
+    return isoDate;
+  }
 };
 
 export default function App() {
@@ -1726,14 +1737,14 @@ export default function App() {
                 new DocxTable({
                   width: { size: 100, type: WidthType.PERCENTAGE },
                   rows: rows,
-                })
+                }),
+                new Paragraph({
+                  children: [new TextRun(`Curitiba, ${formatDateLong(formData.data_documento)}`)],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { before: 600 }
+                }),
               ];
             })(),
-            new Paragraph({
-              children: [new TextRun(`Curitiba, ${formData.data_documento || '____ de ____________ de 202_.'}`)],
-              alignment: AlignmentType.CENTER,
-              spacing: { before: 600 }
-            }),
           ],
         }],
       });
@@ -1859,7 +1870,7 @@ export default function App() {
                   }).join('')}
               </div>
               <div style="margin-top: 40px; text-align: center;">
-                Curitiba, ${formData.data_documento || '____ de ____________ de 202_.'}
+                Curitiba, ${formatDateLong(formData.data_documento)}
               </div>
             </div>
             <script>
@@ -3361,6 +3372,14 @@ export default function App() {
                               onChange={(value) => setFormData(prev => ({...prev, [item.id]: value}))} 
                               readOnly={isReadOnly}
                             />
+                          ) : item.id === 'data_documento' ? (
+                            <input 
+                              type="date"
+                              value={String((formData && formData[item.id]) || '')} 
+                              onChange={(e) => setFormData(prev => ({...prev, [item.id]: e.target.value}))} 
+                              disabled={isReadOnly}
+                              className="w-full p-4 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:opacity-60"
+                            />
                           ) : (
                             <textarea 
                               value={String((formData && formData[item.id]) || '')} 
@@ -3477,7 +3496,7 @@ export default function App() {
                     })}
                 </div>
                 <div className="mt-12 text-center text-xs font-bold text-slate-400">
-                  Curitiba, ____ de ____________ de 202_.
+                  Curitiba, {formatDateLong(formData.data_documento)}
                 </div>
               </motion.div>
             )}
