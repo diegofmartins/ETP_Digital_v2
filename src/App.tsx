@@ -589,6 +589,9 @@ export default function App() {
   const [isAdminViewing, setIsAdminViewing] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number, total: number, type: 'ETPs' | 'Usuários' } | null>(null);
   const [backupToImport, setBackupToImport] = useState<any | null>(null);
+  const [debugUserEmail, setDebugUserEmail] = useState('');
+  const [debugUserInfo, setDebugUserInfo] = useState<any | null>(null);
+  const [isDebugSearching, setIsDebugSearching] = useState(false);
   const [etpSort, setEtpSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
   const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
   const [userSearch, setUserSearch] = useState('');
@@ -638,9 +641,11 @@ export default function App() {
     // Apply search filter
     const filtered = uniqueUsers.filter(u => {
       const search = userSearch.toLowerCase();
-      return (u.displayName?.toLowerCase().includes(search)) || 
-             (u.email?.toLowerCase().includes(search)) ||
-             (u.uid?.toLowerCase().includes(search));
+      if (!search) return true;
+      const dName = (u.displayName || '').toLowerCase();
+      const uEmail = (u.email || '').toLowerCase();
+      const uId = (u.uid || u.id || '').toLowerCase();
+      return dName.includes(search) || uEmail.includes(search) || uId.includes(search);
     });
 
     const sorted = filtered.sort((a, b) => {
@@ -709,31 +714,32 @@ export default function App() {
           // Priority 1: Check if document exists with current UID
           const userRef = doc(db, 'users', u.uid);
           let userSnap = await getDoc(userRef);
-          
+
           // Priority 2: If not found by UID, check if document exists with same email (lowercase check)
           if (!userSnap.exists()) {
             const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('email', '==', (u.email || '').toLowerCase()), limit(1));
+            const cleanEmail = (u.email || '').toLowerCase().trim();
+            const q = query(usersRef, where('email', '==', cleanEmail), limit(1));
             const querySnap = await getDocs(q);
-            
+
             if (!querySnap.empty) {
               const existingDoc = querySnap.docs[0];
               const existingData = existingDoc.data();
-              
+
               // Consolidation: Create new doc with current UID using existing data
               await setDoc(userRef, {
                 ...existingData,
                 uid: u.uid,
-                email: (u.email || '').toLowerCase(),
+                email: cleanEmail,
                 lastActive: serverTimestamp(),
                 _consolidatedFrom: existingDoc.id
               });
-              
+
               // Optionally delete original doc if ID was different to keep unique
               if (existingDoc.id !== u.uid) {
                 await deleteDoc(existingDoc.ref);
               }
-              
+
               userSnap = await getDoc(userRef);
             }
           }
@@ -743,29 +749,29 @@ export default function App() {
             const isDefaultMaster = u.email === "diego.martins@cmc.pr.gov.br";
             const finalRole = isDefaultMaster ? 'master' : (data.role || 'user');
             const finalStatus = isDefaultMaster ? 'approved' : (data.status || 'pending');
-            
+
             setUserRole(finalRole);
             setUserStatus(finalStatus);
             setHasAcceptedTerms(!!data.hasAcceptedTerms);
-            
+
             if (finalStatus === 'approved' && !data.hasAcceptedTerms) {
               setShowWelcomePopup(true);
             }
-            
-            await updateDoc(userRef, { 
+
+            await updateDoc(userRef, {
               lastActive: serverTimestamp(),
               displayName: u.displayName || data.displayName,
-              email: (u.email || '').toLowerCase()
+              email: (u.email || '').toLowerCase().trim()
             });
           } else {
             // Priority 3: Create totally new user
             const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
             const role = isMasterEmail ? 'master' : 'user';
             const status = isMasterEmail ? 'approved' : 'pending';
-            
+
             await setDoc(userRef, {
               uid: u.uid,
-              email: (u.email || '').toLowerCase(),
+              email: (u.email || '').toLowerCase().trim(),
               displayName: u.displayName,
               role: role,
               status: status,
@@ -773,7 +779,7 @@ export default function App() {
               createdAt: serverTimestamp(),
               lastActive: serverTimestamp()
             });
-            
+
             setUserRole(role);
             setUserStatus(status);
             setHasAcceptedTerms(false);
@@ -1217,6 +1223,61 @@ export default function App() {
       handleFirestoreError(err, OperationType.UPDATE, 'users');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const debugLookupUser = async () => {
+    if (!debugUserEmail) return;
+    setIsDebugSearching(true);
+    setDebugUserInfo(null);
+    setApiError(null);
+    try {
+      const emailToSearch = debugUserEmail.toLowerCase().trim();
+      
+      // Attempt 1: Exact search
+      const qExact = query(collection(db, 'users'), where('email', '==', emailToSearch), limit(5));
+      const snapExact = await getDocs(qExact);
+      
+      // Attempt 2: Partial search (starts with) if exact fails
+      let snapPartial = null;
+      if (snapExact.empty) {
+        const qPartial = query(
+          collection(db, 'users'), 
+          where('email', '>=', emailToSearch), 
+          where('email', '<=', emailToSearch + '\uf8ff'),
+          limit(5)
+        );
+        snapPartial = await getDocs(qPartial);
+      }
+
+      const results = snapExact.empty ? (snapPartial?.docs || []) : snapExact.docs;
+
+      // Attempt 3: List ALL emails to see if there's a typo/encoding issue
+      const allSnap = await getDocs(collection(db, 'users'));
+      const allEmails = allSnap.docs.map(d => ({ 
+        email: d.data().email, 
+        id: d.id, 
+        status: d.data().status 
+      }));
+
+      if (results.length === 0) {
+        setDebugUserInfo({ 
+          notFound: true, 
+          email: debugUserEmail,
+          totalUsers: allSnap.size,
+          registeredEmails: allEmails.slice(0, 50) // Show a samples of emails
+        });
+      } else {
+        setDebugUserInfo({ 
+          found: true, 
+          docs: results.map(d => ({ id: d.id, ...d.data() })),
+          totalUsers: allSnap.size
+        });
+      }
+    } catch (err: any) {
+      setApiError("Erro na busca bruta: " + err.message);
+    } finally {
+      setIsDebugSearching(false);
     }
   };
 
@@ -2840,21 +2901,22 @@ export default function App() {
           </table>
         </div>
       ) : adminTab === 'users' ? (
-        <div className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th 
-                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
-                  onClick={() => toggleUserSort('displayName')}
-                >
-                  <div className="flex items-center gap-2 text-left">
-                    Nome / E-mail
-                    {userSort.key === 'displayName' && (
-                      <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
-                    )}
-                  </div>
-                </th>
+        <>
+          <div className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th 
+                    className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                    onClick={() => toggleUserSort('displayName')}
+                  >
+                    <div className="flex items-center gap-2 text-left">
+                      Nome / E-mail
+                      {userSort.key === 'displayName' && (
+                        <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                      )}
+                    </div>
+                  </th>
                 <th 
                   className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleUserSort('status')}
@@ -2952,7 +3014,81 @@ export default function App() {
             </tbody>
           </table>
         </div>
-      ) : (
+
+        {/* Ferramentas de Diagnóstico de Acesso */}
+        <div className="mt-12 p-6 sm:p-8 bg-slate-50 border border-slate-200 rounded-[32px]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600">
+              <Icon name="ShieldQuestion" size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 leading-tight">Diagnóstico de Acesso</h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Busca bruta no banco de dados para resolver problemas de login</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Digite o e-mail exato para verificar..."
+              value={debugUserEmail}
+              onChange={(e) => setDebugUserEmail(e.target.value)}
+              className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+            />
+            <button
+              onClick={debugLookupUser}
+              disabled={isDebugSearching || !debugUserEmail}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isDebugSearching ? <Icon name="Loader2" size={16} className="animate-spin" /> : <Icon name="Search" size={16} />}
+              Verificar no Banco
+            </button>
+          </div>
+
+          {debugUserInfo && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm"
+            >
+              {debugUserInfo.notFound ? (
+                <div>
+                  <div className="flex items-center gap-3 text-amber-600 mb-4">
+                    <Icon name="UserX" size={20} />
+                    <p className="text-sm font-bold">Nenhum registro encontrado para <strong>{debugUserInfo.email}</strong>.</p>
+                  </div>
+                  <div className="text-[10px] space-y-2">
+                    <p className="font-bold text-slate-500 uppercase tracking-widest">E-mails registrados (Amostra de {debugUserInfo.registeredEmails.length} de {debugUserInfo.totalUsers}):</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {debugUserInfo.registeredEmails.map((u: any) => (
+                        <div key={u.id} className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex justify-between items-center">
+                          <span className="truncate">{u.email}</span>
+                          <span className="text-[8px] bg-slate-200 px-1 rounded uppercase">{u.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-3 text-green-600 mb-4">
+                    <Icon name="UserCheck" size={20} />
+                    <p className="text-sm font-bold">Encontrado(s) {debugUserInfo.docs.length} registro(s) no banco de dados:</p>
+                  </div>
+                  <div className="space-y-3">
+                    {debugUserInfo.docs.map((d: any) => (
+                      <div key={d.id} className="p-3 bg-slate-50 rounded-xl text-[10px] font-mono border border-slate-100 overflow-x-auto whitespace-pre">
+                        {JSON.stringify(d, null, 2)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </div>
+      </>
+    ) : (
         <div className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
