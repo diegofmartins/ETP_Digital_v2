@@ -3272,7 +3272,7 @@ export default function App() {
                       </button>
                     </div>
 
-                    {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(item.id)).map(item => (
+                    {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['responsavel', 'assinaturas'].includes(item.id)).map(item => (
                       <div key={item.id} id={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md">
                         <div className="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
                           <div className="flex items-center gap-3">
