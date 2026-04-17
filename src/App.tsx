@@ -2364,9 +2364,9 @@ export default function App() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Título / Objeto</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Atualização</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                  <th className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Título / Objeto</th>
+                  <th className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">Atualização</th>
+                  <th className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -2377,68 +2377,68 @@ export default function App() {
                     animate={{ opacity: 1 }}
                     className="hover:bg-slate-50/50 transition-all group"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-xl ${type === 'in_progress' ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600'}`}>
-                          <Icon name="FileText" size={18} />
+                    <td className="px-3 sm:px-6 py-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className={`p-2 rounded-xl shrink-0 ${type === 'in_progress' ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600'}`}>
+                          <Icon name="FileText" size={16} />
                         </div>
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{draft.title}</h4>
-                          <p className="text-[10px] text-slate-400 font-medium italic">ID: {draft.id}</p>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 text-[11px] sm:text-sm truncate">{draft.title}</h4>
+                          <p className="text-[9px] sm:text-[10px] text-slate-400 font-medium italic truncate">ID: {draft.id}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-xs font-medium text-slate-600">
+                    <td className="px-3 sm:px-6 py-4 shrink-0">
+                      <p className="text-[10px] sm:text-xs font-medium text-slate-600 whitespace-nowrap">
                         {draft.updatedAt?.toDate ? draft.updatedAt.toDate().toLocaleDateString('pt-BR') : 'Recentemente'}
                       </p>
-                      <p className="text-[10px] text-slate-400 font-bold">
+                      <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold whitespace-nowrap">
                         {draft.updatedAt?.toDate ? draft.updatedAt.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
                       </p>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2 text-right">
+                    <td className="px-3 sm:px-6 py-4">
+                      <div className="flex items-center justify-end gap-1.5 sm:gap-2 text-right">
                         {type === 'in_progress' ? (
                           <>
                             <button 
                               onClick={() => toggleETPStatus(draft.id, 'in_progress')}
-                              className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100 flex items-center gap-2"
+                              className="px-2 sm:px-4 py-1.5 sm:py-2 bg-indigo-50 text-indigo-600 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100 flex items-center gap-1.5 sm:gap-2"
                               title="Marcar como Concluído"
                             >
-                              <Icon name="CheckCircle" size={12} /> Concluir
+                              <Icon name="CheckCircle" size={12} /> <span className="hidden sm:inline">Concluir</span>
                             </button>
                             <button 
                               onClick={() => loadDraft(draft, false)}
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              className="p-1.5 sm:p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                               title="Editar"
                             >
-                              <Icon name="Edit3" size={18} />
+                              <Icon name="Edit3" size={16} />
                             </button>
                           </>
                         ) : (
                           <>
                             <button 
                               onClick={() => toggleETPStatus(draft.id, 'completed')}
-                              className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-slate-800 hover:text-white transition-all shadow-sm flex items-center gap-2"
-                              title="Enviar para Edição"
+                              className="px-2 sm:px-4 py-1.5 sm:py-2 bg-slate-100 text-slate-600 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase hover:bg-slate-800 hover:text-white transition-all shadow-sm flex items-center gap-1.5 sm:gap-2"
+                              title="Reabrir para Edição"
                             >
-                              <Icon name="Edit3" size={12} /> Enviar para edição
+                              <Icon name="Edit3" size={12} /> <span className="hidden sm:inline">Editar</span>
                             </button>
                             <button 
                               onClick={() => loadDraft(draft, false)}
-                              className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                              className="p-1.5 sm:p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
                               title="Visualizar"
                             >
-                              <Icon name="Eye" size={18} />
+                              <Icon name="Eye" size={16} />
                             </button>
                           </>
                         )}
                         <button 
                           onClick={() => setDeleteConfirmId(draft.id)}
-                          className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          className="p-1.5 sm:p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                           title="Excluir"
                         >
-                          <Icon name="Trash2" size={18} />
+                          <Icon name="Trash2" size={16} />
                         </button>
                       </div>
                     </td>
@@ -2452,21 +2452,21 @@ export default function App() {
     );
 
     return (
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="flex items-center justify-between mb-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 sm:mb-12">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Meus ETPs</h2>
-            <p className="text-slate-500">Gerencie seus rascunhos e documentos finalizados.</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Meus ETPs</h2>
+            <p className="text-slate-500 text-xs sm:text-sm">Gerencie seus rascunhos e documentos finalizados.</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
             {userRole === 'master' && (
               <button 
                 onClick={() => setView('admin')}
-                className="relative bg-slate-800 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-black transition-all"
+                className="relative bg-slate-800 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-black transition-all flex-1 sm:flex-none justify-center"
               >
-                <Icon name="ShieldCheck" size={18} /> Painel Master
+                <Icon name="ShieldCheck" size={18} /> <span className="hidden sm:inline">Painel Master</span><span className="sm:hidden">Master</span>
                 {pendingUsersCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-bounce">
                     {pendingUsersCount}
                   </span>
                 )}
@@ -2474,9 +2474,9 @@ export default function App() {
             )}
             <button 
               onClick={createNewETP}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+              className="bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex-1 sm:flex-none justify-center"
             >
-              <Icon name="PlusCircle" size={18} /> Novo ETP
+              <Icon name="PlusCircle" size={18} /> <span className="hidden sm:inline">Novo ETP</span><span className="sm:hidden">Novo</span>
             </button>
           </div>
         </div>
@@ -2515,35 +2515,35 @@ export default function App() {
   };
 
   const renderAdmin = () => (
-    <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="flex items-center justify-between mb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 sm:mb-12">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Painel Master</h2>
-          <p className="text-slate-500">Visualização global de todos os ETPs e usuários da Câmara.</p>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Painel Master</h2>
+          <p className="text-slate-500 text-xs sm:text-sm">Visualização global de todos os ETPs e usuários da Câmara.</p>
         </div>
-        <div className="flex gap-3">
-          <label className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all cursor-pointer">
-            <Icon name="Download" size={16} className="rotate-180" /> Importar Backup
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <label className="flex-1 sm:flex-none justify-center bg-slate-100 text-slate-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-slate-200 transition-all cursor-pointer">
+            <Icon name="Download" size={16} className="rotate-180" /> <span className="hidden sm:inline">Importar Backup</span><span className="sm:hidden">Importar</span>
             <input type="file" className="hidden" accept=".json" onChange={importBackup} />
           </label>
           <button 
             onClick={exportBackup}
-            className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
+            className="flex-1 sm:flex-none justify-center bg-slate-100 text-slate-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
           >
-            <Icon name="Download" size={16} /> Exportar Backup
+            <Icon name="Download" size={16} /> <span className="hidden sm:inline">Exportar Backup</span><span className="sm:hidden">Exportar</span>
           </button>
           <button 
             onClick={migrateEtpStatusToInProgress}
-            className="bg-amber-50 text-amber-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-amber-100 transition-all border border-amber-100"
+            className="flex-1 sm:flex-none justify-center bg-amber-50 text-amber-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-amber-100 transition-all border border-amber-100"
             title="Normalizar todos os rascunhos para 'Em Edição'"
           >
-            <Icon name="RefreshCcw" size={16} /> Normalizar Status
+            <Icon name="RefreshCcw" size={16} /> <span className="hidden sm:inline">Normalizar</span><span className="sm:hidden">Corrigir</span>
           </button>
           <button 
             onClick={() => setView('dashboard')}
-            className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-all"
+            className="flex-1 sm:flex-none justify-center bg-slate-100 text-slate-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
           >
-            <Icon name="ChevronDown" size={18} className="rotate-90" /> Voltar
+            <Icon name="ChevronDown" size={18} className="rotate-90" /> <span className="hidden sm:inline">Voltar</span><span className="sm:hidden">Sair</span>
           </button>
         </div>
       </div>
@@ -2562,45 +2562,45 @@ export default function App() {
         </motion.div>
       )}
 
-      <div className="flex gap-1 mb-8 bg-slate-100 p-1 rounded-2xl w-fit">
+      <div className="flex flex-wrap gap-1 mb-8 bg-slate-100 p-1 rounded-2xl w-full sm:w-fit">
         <button 
           onClick={() => setAdminTab('etps')}
-          className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${adminTab === 'etps' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'etps' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
-          Documentos ETP
+          Documentos
         </button>
         <button 
           onClick={() => setAdminTab('users')}
-          className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${adminTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
-          Gerenciar Usuários
+          Usuários
         </button>
         <button 
           onClick={() => setAdminTab('trash')}
-          className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${adminTab === 'trash' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'trash' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
         >
-          Lixeira (24h)
+          Lixeira
         </button>
       </div>
 
       {adminTab === 'etps' ? (
-        <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 overflow-hidden shadow-sm overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleEtpSort('title')}
                 >
                   <div className="flex items-center gap-2">
-                    Título / Objeto
+                    Título
                     {etpSort.key === 'title' && (
                       <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
                     )}
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleEtpSort('userEmail')}
                 >
                   <div className="flex items-center gap-2">
@@ -2611,52 +2611,52 @@ export default function App() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleEtpSort('updatedAt')}
                 >
                   <div className="flex items-center gap-2">
-                    Data / Hora
+                    Data
                     {etpSort.key === 'updatedAt' && (
                       <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+                <th className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody>
               {sortedDrafts.map(draft => (
                 <tr key={draft.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-slate-900">{draft.title}</div>
-                    <div className="text-[10px] text-slate-400 uppercase">{draft.id}</div>
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="font-bold text-slate-900 text-xs sm:text-sm line-clamp-1">{draft.title}</div>
+                    <div className="text-[9px] text-slate-400 uppercase">{draft.id}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-slate-600">{draft.userEmail}</div>
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="text-[11px] sm:text-sm text-slate-600 truncate max-w-[120px]">{draft.userEmail}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-slate-600">
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="text-[11px] sm:text-sm text-slate-600 whitespace-nowrap">
                       {draft.updatedAt?.toDate().toLocaleDateString('pt-BR')}
-                      <span className="ml-2 text-[10px] text-slate-400">
+                      <span className="hidden sm:inline ml-2 text-[10px] text-slate-400">
                         {draft.updatedAt?.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <button onClick={() => loadDraft(draft, true)} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2">
-                        <Icon name="Eye" size={16} />
-                        <span className="text-[10px] font-bold uppercase">Visualizar</span>
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="flex gap-1.5 sm:gap-2">
+                      <button onClick={() => loadDraft(draft, true)} className="p-1.5 sm:p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2">
+                        <Icon name="Eye" size={14} />
+                        <span className="text-[9px] sm:text-[10px] font-bold uppercase hidden sm:inline">Ver</span>
                       </button>
                       <button 
                         onClick={() => setReassignState({ draftId: draft.id, currentEmail: draft.userEmail || '', title: draft.title || '' })}
-                        className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
-                        title="Reatribuir Autor"
+                        className="p-1.5 sm:p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                        title="Reatribuir"
                       >
-                        <Icon name="Settings" size={16} />
+                        <Icon name="Settings" size={14} />
                       </button>
-                      <button onClick={() => setDeleteConfirmId(draft.id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
-                        <Icon name="Trash2" size={16} />
+                      <button onClick={() => setDeleteConfirmId(draft.id)} className="p-1.5 sm:p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
+                        <Icon name="Trash2" size={14} />
                       </button>
                     </div>
                   </td>
@@ -2666,15 +2666,15 @@ export default function App() {
           </table>
         </div>
       ) : adminTab === 'users' ? (
-        <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleUserSort('displayName')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-left">
                     Nome / E-mail
                     {userSort.key === 'displayName' && (
                       <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
@@ -2682,10 +2682,10 @@ export default function App() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleUserSort('status')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-left">
                     Status
                     {userSort.key === 'status' && (
                       <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
@@ -2693,92 +2693,82 @@ export default function App() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleUserSort('role')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-left">
                     Cargo
                     {userSort.key === 'role' && (
                       <Icon name={userSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+                <th className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody>
               {sortedUsers.map(u => {
-                const isOnline = u.lastActive && (Date.now() - u.lastActive.toMillis() < 300000); // 5 minutes threshold
+                const isOnline = u.lastActive && (Date.now() - u.lastActive.toMillis() < 300000); 
                 
                 return (
                   <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-xs">
-                            {u.displayName?.substring(0, 2).toUpperCase() || '??'}
+                        <div className="relative shrink-0">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-[10px] sm:text-xs uppercase">
+                            {u.displayName?.substring(0, 2) || '??'}
                           </div>
-                          <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${isOnline ? 'bg-green-500' : 'bg-slate-300'}`} title={isOnline ? 'Online agora' : 'Offline'} />
+                          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isOnline ? 'bg-green-500' : 'bg-slate-300'}`} />
                         </div>
-                        <div>
-                          <div className="font-bold text-slate-900 flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2 truncate">
                             {u.displayName}
-                            {isOnline && <span className="text-[8px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">Ativo</span>}
                           </div>
-                          <div className="text-xs text-slate-500">{u.email}</div>
+                          <div className="text-[10px] sm:text-xs text-slate-500 truncate">{u.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                    <td className="px-3 sm:px-6 py-4 shrink-0">
+                    <span className={`px-2 sm:px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${
                       u.status === 'approved' ? 'bg-green-100 text-green-700' : 
                       u.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
                     }`}>
-                      {u.status === 'approved' ? 'Aprovado' : u.status === 'pending' ? 'Pendente' : 'Desabilitado'}
+                      {u.status === 'approved' ? 'Aprovado' : u.status === 'pending' ? 'Pendente' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-6 py-4 shrink-0">
                     <select 
                       value={u.role}
                       onChange={(e) => updateUserRole(u.id, e.target.value as any)}
-                      className="text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none"
+                      className="text-[10px] sm:text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 outline-none"
                     >
                       <option value="user">Servidor</option>
                       <option value="master">Master</option>
                     </select>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {u.status !== 'approved' && (
                         <button 
                           onClick={() => updateUserStatus(u.id, 'approved')}
-                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-bold hover:bg-green-700 transition-all"
+                          className="px-2 sm:px-3 py-1.5 bg-green-600 text-white rounded-lg text-[9px] sm:text-[10px] font-bold hover:bg-green-700 transition-all"
                         >
-                          Aprovar
+                          Ativar
                         </button>
                       )}
                       {u.status === 'approved' && u.role !== 'master' && (
                         <button 
                           onClick={() => updateUserStatus(u.id, 'disabled')}
-                          className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-100 transition-all"
+                          className="px-2 sm:px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] sm:text-[10px] font-bold hover:bg-red-100 transition-all whitespace-nowrap"
                         >
-                          Desabilitar
-                        </button>
-                      )}
-                      {u.status === 'disabled' && (
-                        <button 
-                          onClick={() => updateUserStatus(u.id, 'approved')}
-                          className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold hover:bg-indigo-100 transition-all"
-                        >
-                          Reativar
+                          Bloquear
                         </button>
                       )}
                       <button 
                         onClick={() => setUserToDelete(u)}
-                        className="p-2 text-slate-300 hover:text-red-600 transition-colors"
-                        title="Excluir Usuário Permanentemente"
+                        className="p-1.5 sm:p-2 text-slate-300 hover:text-red-600 transition-colors"
                       >
-                        <Icon name="Trash2" size={16} />
+                        <Icon name="Trash2" size={14} />
                       </button>
                     </div>
                   </td>
@@ -2789,50 +2779,50 @@ export default function App() {
           </table>
         </div>
       ) : (
-        <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
+        <div className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleEtpSort('title')}
                 >
-                  <div className="flex items-center gap-2">
-                    Título / Objeto
+                  <div className="flex items-center gap-2 text-left">
+                    Título
                     {etpSort.key === 'title' && (
                       <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
                     )}
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleEtpSort('userEmail')}
                 >
-                  <div className="flex items-center gap-2">
-                    Excluído por
+                  <div className="flex items-center gap-2 text-left">
+                    Autor
                     {etpSort.key === 'userEmail' && (
                       <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
                     )}
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleEtpSort('deletedAt')}
                 >
-                  <div className="flex items-center gap-2">
-                    Tempo Restante
+                  <div className="flex items-center gap-2 text-left">
+                    Status
                     {etpSort.key === 'deletedAt' && (
                       <Icon name={etpSort.direction === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={14} />
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+                <th className="px-3 sm:px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right px-6">Ações</th>
               </tr>
             </thead>
             <tbody>
               {sortedTrash.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400 font-bold italic">
+                  <td colSpan={4} className="px-3 sm:px-6 py-12 text-center text-slate-400 font-bold italic">
                     Lixeira vazia.
                   </td>
                 </tr>
@@ -2844,33 +2834,33 @@ export default function App() {
                   const minsLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
                   return (
-                    <tr key={draft.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-slate-900">{draft.title}</div>
-                        <div className="text-[10px] text-slate-400 uppercase italic">ID: {draft.id}</div>
+                    <tr key={draft.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors text-left">
+                      <td className="px-3 sm:px-6 py-4">
+                        <div className="font-bold text-slate-900 text-xs sm:text-sm truncate max-w-[200px]">{draft.title}</div>
+                        <div className="text-[9px] text-slate-400 uppercase italic">ID: {draft.id}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-slate-600">{draft.userEmail}</div>
+                      <td className="px-3 sm:px-6 py-4">
+                        <div className="text-[11px] sm:text-sm text-slate-600 truncate max-w-[120px]">{draft.userEmail}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className={`text-sm font-black ${hoursLeft < 2 ? 'text-red-500' : 'text-amber-500'}`}>
+                      <td className="px-3 sm:px-6 py-4">
+                        <div className={`text-[11px] sm:text-sm font-black whitespace-nowrap ${hoursLeft < 2 ? 'text-red-500' : 'text-amber-500'}`}>
                           {hoursLeft}h {minsLeft}m
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
+                      <td className="px-3 sm:px-6 py-4">
+                        <div className="flex justify-end gap-1.5 sm:gap-2">
                           <button 
                             onClick={() => restoreDraft(draft.id)} 
-                            className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-[10px] font-black uppercase tracking-widest"
+                            className="flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-[9px] sm:text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
                           >
-                            <Icon name="PlusCircle" size={14} /> Restaurar
+                            <Icon name="PlusCircle" size={12} /> <span className="hidden sm:inline">Restaurar</span>
                           </button>
                           <button 
                             onClick={() => permanentDeleteDraft(draft.id)} 
-                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                            title="Excluir Permanentemente"
+                            className="p-1.5 sm:p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                            title="Excluir Permanente"
                           >
-                            <Icon name="Trash2" size={16} />
+                            <Icon name="Trash2" size={14} />
                           </button>
                         </div>
                       </td>
@@ -2892,19 +2882,19 @@ export default function App() {
       {view === 'dashboard' ? (
         <>
           <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shrink-0">
                   <Icon name="Wand2" size={18} />
                 </div>
-                <h1 className="text-sm font-black uppercase tracking-tight">ETP DIGITAL</h1>
+                <h1 className="text-sm font-black uppercase tracking-tight truncate">ETP DIGITAL</h1>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right hidden sm:block">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <div className="text-right hidden md:block shrink-0">
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{userRole === 'master' ? 'Master' : 'Servidor'}</div>
                   <div className="text-xs font-bold text-slate-700">{user.displayName}</div>
                 </div>
-                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-600 transition-colors">
+                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-600 transition-colors shrink-0">
                   <Icon name="X" size={20} />
                 </button>
               </div>
@@ -2915,14 +2905,14 @@ export default function App() {
       ) : view === 'admin' ? (
         <>
           <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-slate-800 p-2 rounded-xl text-white shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-slate-800 p-2 rounded-xl text-white shadow-lg shrink-0">
                   <Icon name="ShieldCheck" size={18} />
                 </div>
-                <h1 className="text-sm font-black uppercase tracking-tight">ADMINISTRAÇÃO</h1>
+                <h1 className="text-sm font-black uppercase tracking-tight truncate">ADMINISTRAÇÃO</h1>
               </div>
-              <button onClick={() => setView('dashboard')} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+              <button onClick={() => setView('dashboard')} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors shrink-0">
                 <Icon name="X" size={20} />
               </button>
             </div>
@@ -2932,29 +2922,29 @@ export default function App() {
       ) : (
         <div className="pb-20 text-slate-900">
           <header className="bg-white border-b border-slate-200 sticky top-0 z-40 no-print shadow-sm">
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar no-print">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <button 
                   onClick={() => {
                     setView(isAdminViewing ? 'admin' : 'dashboard');
                     setIsAdminViewing(false);
                   }} 
-                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-colors shrink-0"
                 >
                   <Icon name="ChevronDown" size={20} className="rotate-90 text-slate-400" />
                 </button>
-                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg">
-                  <Icon name="Wand2" size={18} />
+                <div className="bg-indigo-600 p-1.5 rounded-lg text-white shadow-lg shrink-0">
+                  <Icon name="Wand2" size={16} />
                 </div>
-                <h1 className="text-sm font-black uppercase tracking-tight">
+                <h1 className="text-xs font-black uppercase tracking-tight hidden sm:block">
                   {isReadOnly ? "VISUALIZAÇÃO / CONSULTA" : "EDITOR DE ETP"}
                 </h1>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 {!isReadOnly && (
-                  <div className="flex items-center gap-2 mr-4 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-                    <div className={`w-2 h-2 rounded-full ${isSaving ? 'bg-orange-400 animate-pulse' : 'bg-green-500'}`} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-full border border-slate-100 hidden md:flex shrink-0">
+                    <div className={`w-1.5 h-1.5 rounded-full ${isSaving ? 'bg-orange-400 animate-pulse' : 'bg-green-500'}`} />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest shrink-0">
                       {isSaving ? 'Salvando...' : 'Sincronizado'}
                     </span>
                   </div>
@@ -2963,49 +2953,53 @@ export default function App() {
                   <button 
                     onClick={() => saveDraft(true)}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+                    title="Salvar"
+                    className="px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 shrink-0"
                   >
                     <Icon name="CheckCircle" size={14} className={isSaving ? "animate-pulse text-orange-400" : "text-green-500"} />
-                    Salvar
+                    <span className="hidden sm:inline">Salvar</span>
                   </button>
                 )}
                 {isReadOnly && (
-                  <div className="px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-2 mr-4">
-                    <Icon name="ShieldCheck" size={14} />
-                    Modo Somente Leitura
+                  <div className="px-3 py-2 bg-amber-50 text-amber-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1.5 shrink-0">
+                    <Icon name="ShieldCheck" size={12} />
+                    <span className="hidden sm:inline">Modo Somente Leitura</span>
                   </div>
                 )}
                 <button 
                   onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}
-                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-2"
+                  title={viewMode === 'edit' ? 'Visualizar' : 'Editar'}
+                  className="px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold hover:bg-slate-200 transition-all flex items-center gap-1.5 shrink-0"
                 >
                   <Icon name={viewMode === 'edit' ? 'Eye' : 'Edit3'} size={14} />
-                  {viewMode === 'edit' ? 'Visualizar' : 'Editar'}
+                  <span className="hidden sm:inline">{viewMode === 'edit' ? 'Visualizar' : 'Editar'}</span>
                 </button>
                 <button 
                   onClick={handleExportDoc}
-                  className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-all flex items-center gap-2"
+                  title="Exportar DOCX"
+                  className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-bold hover:bg-indigo-100 transition-all flex items-center gap-1.5 shrink-0"
                 >
                   <Icon name="FileDown" size={14} />
-                  DOCX
+                  <span className="hidden sm:inline">DOCX</span>
                 </button>
                 <button 
                   onClick={handlePrint}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
+                  title="Imprimir"
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-bold hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-100 shrink-0"
                 >
                   <Icon name="Printer" size={14} />
-                  Imprimir
+                  <span className="hidden sm:inline">Imprimir</span>
                 </button>
               </div>
             </div>
           </header>
 
-          <main className="max-w-7xl mx-auto px-6 py-12 no-print">
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 no-print">
             {viewMode === 'edit' ? (
-              <div className="flex flex-col lg:flex-row gap-8">
+              <div className="flex flex-col lg:flex-row items-start gap-8">
               {/* TREE SIDEBAR */}
-              <aside className={`transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-12' : 'w-full lg:w-80'} sticky top-28 h-[calc(100vh-140px)] flex flex-col no-print`}>
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden">
+              <aside className={`transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-12' : 'w-full lg:w-80'} lg:sticky lg:top-28 lg:h-[calc(100vh-140px)] flex flex-col no-print items-stretch shrink-0`}>
+                <div className={`bg-white rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden ${sidebarCollapsed ? 'hidden lg:flex' : 'flex'}`}>
                   <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                     {!sidebarCollapsed && <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estrutura do ETP</h3>}
                     <button 
@@ -3092,22 +3086,22 @@ export default function App() {
 
               <div className="flex-1 space-y-6">
                 {/* STEP INDICATOR */}
-                <div className="flex items-center justify-center gap-4 mb-8 no-print">
+                  <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-8 no-print">
                   <button 
                     onClick={() => setActiveTab('diagnostic')}
-                    className={`flex items-center gap-3 px-6 py-3 rounded-2xl transition-all ${activeTab === 'diagnostic' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200'}`}
+                    className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 rounded-2xl transition-all ${activeTab === 'diagnostic' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200'}`}
                   >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${activeTab === 'diagnostic' ? 'bg-white text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>1</div>
-                    <span className="text-xs font-black uppercase tracking-widest">Diagnóstico</span>
+                    <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-black ${activeTab === 'diagnostic' ? 'bg-white text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>1</div>
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest truncate">Diagnóstico</span>
                   </button>
-                  <div className="w-12 h-px bg-slate-200" />
+                  <div className="w-6 sm:w-12 h-px bg-slate-200" />
                   <button 
                     onClick={() => isMandatoryFilled() && setActiveTab('technical')}
                     disabled={!isMandatoryFilled()}
-                    className={`flex items-center gap-3 px-6 py-3 rounded-2xl transition-all ${activeTab === 'technical' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200 disabled:opacity-50'}`}
+                    className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 rounded-2xl transition-all ${activeTab === 'technical' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-200 hover:border-indigo-200 disabled:opacity-50'}`}
                   >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${activeTab === 'technical' ? 'bg-white text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>2</div>
-                    <span className="text-xs font-black uppercase tracking-widest">Detalhamento Técnico</span>
+                    <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-black ${activeTab === 'technical' ? 'bg-white text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>2</div>
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest truncate">Detalhamento Técnico</span>
                   </button>
                 </div>
 
