@@ -48,6 +48,7 @@ export interface ETPData {
   include_riscos_interna: boolean;
   include_riscos_externa: boolean;
   fotos: string;
+  data_documento: string;
   assinaturas: string;
   status?: 'in_progress' | 'completed';
   _version?: number;

@@ -374,6 +374,15 @@ const structure: ETPStructureItem[] = [
   { id: 'tabela_riscos_externa', label: 'Anexo I - Riscos Fase Externa', icon: 'Layout', section: 'V - GESTÃO DE RISCOS', isAiEnabled: true, helpText: 'Tabela detalhada dos riscos identificados na fase externa do processo, incluindo descrição, impacto, probabilidade e medidas de mitigação.' },
   { id: 'fotos', label: 'Fotos e Ilustrações do Objeto', icon: 'Eye', section: 'VI - ANEXOS FOTOGRÁFICOS', isAiEnabled: false, helpText: 'Anexe fotos ou ilustrações que ajudem a identificar e descrever o objeto da contratação. As imagens devem ser nítidas e acompanhadas de legendas explicativas.' },
   { 
+    id: 'data_documento', 
+    label: 'Data do Documento', 
+    icon: 'BarChart', 
+    section: 'VII - ASSINATURAS', 
+    isAiEnabled: false, 
+    isEssential: true,
+    placeholder: 'Ex: 17 de abril de 2026'
+  },
+  { 
     id: 'assinaturas', 
     label: 'Assinaturas (NOME, Lotação - uma por linha)', 
     icon: 'Edit3', 
@@ -518,6 +527,7 @@ const INITIAL_STATE: ETPData = {
   include_riscos_interna: false,
   include_riscos_externa: false,
   fotos: '',
+  data_documento: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }),
   assinaturas: '',
   status: 'in_progress',
   _version: 2,
@@ -1451,7 +1461,7 @@ export default function App() {
     setApiError(null);
     try {
       const filteredStructure = structure
-        .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel'].includes(s.id))
+        .filter(s => !['responsavel'].includes(s.id))
         .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
         .filter(s => s.id !== 'fotos' || (formData && formData.fotos))
         .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
@@ -1720,7 +1730,7 @@ export default function App() {
               ];
             })(),
             new Paragraph({
-              children: [new TextRun(`Curitiba, ____ de ____________ de 202_.`)],
+              children: [new TextRun(`Curitiba, ${formData.data_documento || '____ de ____________ de 202_.'}`)],
               alignment: AlignmentType.CENTER,
               spacing: { before: 600 }
             }),
@@ -1789,7 +1799,7 @@ export default function App() {
               </div>
 
               ${structure
-                .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel', 'assinaturas'].includes(s.id))
+                .filter(s => !['responsavel'].includes(s.id))
                 .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
                 .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
                 .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
@@ -1798,7 +1808,7 @@ export default function App() {
                   if (item.id === 'fotos' && !content) return '';
                   
                   // Section header logic
-                  const itemsInSection = structure.filter(s => s.section === item.section && s.section !== '0. DIAGNÓSTICO INICIAL' && !['processo_spae', 'unidade_requisitante', 'responsavel', 'assinaturas'].includes(s.id));
+                  const itemsInSection = structure.filter(s => s.section === item.section && s.section !== '0. DIAGNÓSTICO INICIAL' && !['responsavel'].includes(s.id));
                   const isFirstInSection = itemsInSection[0]?.id === item.id;
                   const sectionHeader = (isFirstInSection && item.section && item.section !== 'I - INFORMAÇÕES GERAIS') 
                     ? `<div class="section-title">${item.section}</div>` 
@@ -1849,7 +1859,7 @@ export default function App() {
                   }).join('')}
               </div>
               <div style="margin-top: 40px; text-align: center;">
-                Curitiba, ____ de ____________ de 202_.
+                Curitiba, ${formData.data_documento || '____ de ____________ de 202_.'}
               </div>
             </div>
             <script>
@@ -3272,7 +3282,7 @@ export default function App() {
                       </button>
                     </div>
 
-                    {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['responsavel', 'assinaturas'].includes(item.id)).map(item => (
+                    {structure.filter(item => item.section !== '0. DIAGNÓSTICO INICIAL' && !['responsavel'].includes(item.id)).map(item => (
                       <div key={item.id} id={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md">
                         <div className="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
                           <div className="flex items-center gap-3">
@@ -3403,7 +3413,7 @@ export default function App() {
                 </div>
 
                 {Object.entries(structure
-                  .filter(s => !['processo_spae', 'unidade_requisitante', 'responsavel', 'assinaturas'].includes(s.id))
+                  .filter(s => !['responsavel'].includes(s.id))
                   .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
                   .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
                   .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
