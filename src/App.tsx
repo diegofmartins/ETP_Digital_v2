@@ -1474,6 +1474,7 @@ export default function App() {
       const filteredStructure = structure
         .filter(s => !['responsavel'].includes(s.id))
         .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
+        .filter(s => s.section !== 'VII - ASSINATURAS')
         .filter(s => s.id !== 'fotos' || (formData && formData.fotos))
         .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
         .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa));
@@ -1733,15 +1734,15 @@ export default function App() {
               }
 
               return [
-                new Paragraph({ children: [new TextRun("")], spacing: { before: 600 } }),
-                new DocxTable({
-                  width: { size: 100, type: WidthType.PERCENTAGE },
-                  rows: rows,
-                }),
+                new Paragraph({ children: [new TextRun("")], spacing: { before: 800 } }),
                 new Paragraph({
                   children: [new TextRun(`Curitiba, ${formatDateLong(formData.data_documento)}`)],
                   alignment: AlignmentType.CENTER,
-                  spacing: { before: 600 }
+                  spacing: { before: 400, after: 600 }
+                }),
+                new DocxTable({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  rows: rows,
                 }),
               ];
             })(),
@@ -1812,6 +1813,7 @@ export default function App() {
               ${structure
                 .filter(s => !['responsavel'].includes(s.id))
                 .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
+                .filter(s => s.section !== 'VII - ASSINATURAS')
                 .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
                 .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
                 .map(item => {
@@ -1854,6 +1856,9 @@ export default function App() {
                   `;
                 }).join('')}
 
+              <div style="margin-top: 60px; text-align: center; font-weight: bold; font-size: 11pt; margin-bottom: 40px;">
+                Curitiba, ${formatDateLong(formData.data_documento)}
+              </div>
               <div class="signature-grid">
                 ${(formData.assinaturas || "")
                   .split('\n')
@@ -1868,9 +1873,6 @@ export default function App() {
                       </div>
                     `;
                   }).join('')}
-              </div>
-              <div style="margin-top: 40px; text-align: center;">
-                Curitiba, ${formatDateLong(formData.data_documento)}
               </div>
             </div>
             <script>
@@ -3157,7 +3159,7 @@ export default function App() {
                 </div>
               </aside>
 
-              <div className="flex-1 space-y-6">
+              <div className="flex-1 space-y-6 pb-96">
                 {/* STEP INDICATOR */}
                   <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-8 no-print">
                   <button 
@@ -3434,6 +3436,7 @@ export default function App() {
                 {Object.entries(structure
                   .filter(s => !['responsavel'].includes(s.id))
                   .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
+                  .filter(s => s.section !== 'VII - ASSINATURAS')
                   .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
                   .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
                   .reduce((acc, item) => {
@@ -3480,7 +3483,10 @@ export default function App() {
                   </div>
                 ))}
 
-                <div className="mt-16 grid grid-cols-2 gap-8">
+                <div className="mt-16 text-center text-sm font-bold text-slate-500 mb-12">
+                  Curitiba, {formatDateLong(formData.data_documento)}
+                </div>
+                <div className="grid grid-cols-2 gap-8">
                   {(formData.assinaturas || "")
                     .split('\n')
                     .map(line => line.trim())
@@ -3494,9 +3500,6 @@ export default function App() {
                         </div>
                       );
                     })}
-                </div>
-                <div className="mt-12 text-center text-xs font-bold text-slate-400">
-                  Curitiba, {formatDateLong(formData.data_documento)}
                 </div>
               </motion.div>
             )}
