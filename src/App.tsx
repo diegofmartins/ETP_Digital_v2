@@ -5,7 +5,8 @@ import {
   FileText, ClipboardList, Target, CheckCircle, Sparkles, Loader2, Printer, 
   Layout, BarChart, ShieldCheck, Leaf, Settings, Zap, Wand2, Eye, Edit3, 
   AlertTriangle, ChevronDown, ChevronUp, Download, Info, Trash2, PlusCircle,
-  ImagePlus, X, ChevronLeft, ChevronRight, ArrowLeft, Lightbulb, Settings2
+  ImagePlus, X, ChevronLeft, ChevronRight, ArrowLeft, Lightbulb, Settings2,
+  RefreshCcw
 } from "lucide-react";
 import { ETPData, ETPField, ETPStructureItem, ETPExample } from "./types";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType, ImageRun } from "docx";
@@ -14,7 +15,10 @@ import JoditEditor from 'jodit-react';
 
 import { auth, db, googleProvider, OperationType, handleFirestoreError } from "./firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser, browserPopupRedirectResolver } from "firebase/auth";
-import { collection, query, where, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, getDoc, addDoc, limit, getDocs } from "firebase/firestore";
+import { 
+  collection, query, where, onSnapshot, doc, setDoc, updateDoc, deleteDoc, 
+  serverTimestamp, getDoc, addDoc, limit, getDocs, orderBy, writeBatch 
+} from "firebase/firestore";
 
 const SYSTEM_PROMPT = `Você é um Especialista em Contratações Públicas da Câmara Municipal de Curitiba (CMC), com profundo conhecimento da Lei 14.133/2021.
 Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP) seguindo RIGOROSAMENTE as diretrizes abaixo:
@@ -766,7 +770,11 @@ export default function App() {
   // Trash Listener (Master only)
   useEffect(() => {
     if (isMaster && userStatus === 'approved' && isAuthReady) {
-      const q = query(collection(db, 'etps'), where('status', '==', 'deleted'));
+      const q = query(
+        collection(db, 'etps'), 
+        where('status', '==', 'deleted'),
+        orderBy('updatedAt', 'desc')
+      );
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const now = Date.now();
         const trash = snapshot.docs.map(doc => {
@@ -805,9 +813,14 @@ export default function App() {
 
     let q;
     if (userRole === 'master' && view === 'admin') {
-      q = query(collection(db, 'etps'), limit(100));
+      q = query(collection(db, 'etps'), orderBy('updatedAt', 'desc'), limit(100));
     } else {
-      q = query(collection(db, 'etps'), where('userId', '==', user.uid), limit(100));
+      q = query(
+        collection(db, 'etps'), 
+        where('userId', '==', user.uid), 
+        orderBy('updatedAt', 'desc'),
+        limit(100)
+      );
     }
 
     return onSnapshot(q, (snapshot) => {
@@ -960,8 +973,9 @@ export default function App() {
   const restoreDraft = async (id: string) => {
     try {
       await updateDoc(doc(db, 'etps', id), { 
-        status: 'active',
-        deletedAt: null
+        status: 'in_progress',
+        deletedAt: null,
+        updatedAt: serverTimestamp()
       });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.UPDATE, 'etps');
@@ -993,6 +1007,44 @@ export default function App() {
       });
     } catch (err: any) {
       handleFirestoreError(err, OperationType.UPDATE, 'etps');
+    }
+  };
+
+  const migrateEtpStatusToInProgress = async () => {
+    if (!isMaster) return;
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const q = query(collection(db, 'etps'), where('status', '!=', 'completed'));
+      const snapshot = await getDocs(q);
+      let count = 0;
+      
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
+        if (data.status !== 'deleted' && data.status !== 'in_progress') {
+          await updateDoc(docSnap.ref, { 
+            status: 'in_progress',
+            'data.status': 'in_progress',
+            updatedAt: serverTimestamp()
+          });
+          count++;
+        }
+      }
+      
+      console.log(`${count} ETPs migrados para 'in_progress'`);
+      setDrafts(prev => prev.map(d => {
+        if (d.status !== 'completed' && d.status !== 'deleted') {
+          return { ...d, status: 'in_progress' };
+        }
+        return d;
+      }));
+      // Simple feedback via console/state since alerts are restricted
+      setApiError(`Sucesso: ${count} rascunhos foram normalizados para 'Em Edição'.`);
+      setTimeout(() => setApiError(null), 5000);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.UPDATE, 'etps');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -2487,6 +2539,13 @@ export default function App() {
             className="bg-slate-100 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
           >
             <Icon name="Download" size={16} /> Exportar Backup
+          </button>
+          <button 
+            onClick={migrateEtpStatusToInProgress}
+            className="bg-amber-50 text-amber-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-amber-100 transition-all border border-amber-100"
+            title="Normalizar todos os rascunhos para 'Em Edição'"
+          >
+            <Icon name="RefreshCcw" size={16} /> Normalizar Status
           </button>
           <button 
             onClick={() => setView('dashboard')}
