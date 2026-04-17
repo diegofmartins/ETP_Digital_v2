@@ -1475,6 +1475,7 @@ export default function App() {
         .filter(s => !['responsavel'].includes(s.id))
         .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
         .filter(s => s.section !== 'VII - ASSINATURAS')
+        .filter(s => !['unidade_requisitante', 'processo_spae'].includes(s.id))
         .filter(s => s.id !== 'fotos' || (formData && formData.fotos))
         .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
         .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa));
@@ -1814,6 +1815,7 @@ export default function App() {
                 .filter(s => !['responsavel'].includes(s.id))
                 .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
                 .filter(s => s.section !== 'VII - ASSINATURAS')
+                .filter(s => !['unidade_requisitante', 'processo_spae'].includes(s.id))
                 .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
                 .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
                 .map(item => {
@@ -3420,15 +3422,19 @@ export default function App() {
                   <p className="text-xs font-bold mt-2">Câmara Municipal de Curitiba</p>
                 </div>
                 
-                <div className="mb-8 p-4 border border-slate-200 rounded-xl bg-slate-50">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Nº Processo SPAE</span>
-                      <span className="text-sm font-medium">{formData.processo_spae || '---'}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Área Demandante</span>
-                      <span className="text-sm font-medium">{formData.unidade_requisitante || '---'}</span>
+                <div className="mb-8">
+                  <h3 className="text-lg font-black text-indigo-600 mb-4 border-b-2 border-indigo-100 pb-2">I - INFORMAÇÕES GERAIS</h3>
+                  <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">1. IDENTIFICAÇÃO DO PROCESSO E ÁREA REQUISITANTE</p>
+                  <div className="p-6 border border-slate-200 rounded-2xl bg-slate-50 shadow-sm">
+                    <div className="grid grid-cols-2 gap-8">
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-slate-400 block tracking-widest mb-1">Nº Processo SPAE</span>
+                        <span className="text-sm font-bold text-slate-700">{formData.processo_spae || '---'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-slate-400 block tracking-widest mb-1">Área Demandante</span>
+                        <span className="text-sm font-bold text-slate-700">{formData.unidade_requisitante || '---'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3437,6 +3443,7 @@ export default function App() {
                   .filter(s => !['responsavel'].includes(s.id))
                   .filter(s => s.section !== '0. DIAGNÓSTICO INICIAL')
                   .filter(s => s.section !== 'VII - ASSINATURAS')
+                  .filter(s => !['unidade_requisitante', 'processo_spae'].includes(s.id))
                   .filter(s => s.id !== 'tabela_riscos_interna' || (formData && formData.include_riscos_interna))
                   .filter(s => s.id !== 'tabela_riscos_externa' || (formData && formData.include_riscos_externa))
                   .reduce((acc, item) => {
