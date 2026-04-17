@@ -2201,7 +2201,7 @@ export default function App() {
       )}
 
       {/* Global Loading Overlay */}
-      {(isSaving || importProgress) && (
+      {importProgress && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
@@ -2212,22 +2212,18 @@ export default function App() {
               <Icon name="Loader2" size={32} className="animate-spin" />
             </div>
             <h3 className="text-xl font-black text-slate-900 mb-2">
-              {importProgress ? `Restaurando ${importProgress.type}` : "Processando..."}
+              Restaurando {importProgress.type}
             </h3>
             <p className="text-slate-500 text-sm mb-6">
-              {importProgress 
-                ? `Por favor, aguarde. Importando item ${importProgress.current} de ${importProgress.total}.`
-                : "Estamos sincronizando as informações com o banco de dados."}
+              Por favor, aguarde. Importando item {importProgress.current} de {importProgress.total}.
             </p>
-            {importProgress && (
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <motion.div 
-                  className="bg-indigo-600 h-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
-                />
-              </div>
-            )}
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <motion.div 
+                className="bg-indigo-600 h-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+              />
+            </div>
           </motion.div>
         </div>
       )}
