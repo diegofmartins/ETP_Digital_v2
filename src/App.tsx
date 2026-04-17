@@ -634,12 +634,18 @@ export default function App() {
           if (userSnap.exists()) {
             const data = userSnap.data();
             console.log("Existing user found:", data.email, "Role:", data.role, "Status:", data.status);
-            setUserRole(data.role || 'user');
-            setUserStatus(data.status || 'pending');
+            
+            // Força privilégios master se o e-mail for o do administrador padrão
+            const isDefaultMaster = u.email === "diego.martins@cmc.pr.gov.br";
+            const finalRole = isDefaultMaster ? 'master' : (data.role || 'user');
+            const finalStatus = isDefaultMaster ? 'approved' : (data.status || 'pending');
+            
+            setUserRole(finalRole);
+            setUserStatus(finalStatus);
             setHasAcceptedTerms(!!data.hasAcceptedTerms);
             
             // Show welcome popup if approved but hasn't accepted terms yet
-            if (data.status === 'approved' && !data.hasAcceptedTerms) {
+            if (finalStatus === 'approved' && !data.hasAcceptedTerms) {
               setShowWelcomePopup(true);
             }
             
@@ -655,12 +661,17 @@ export default function App() {
                 // User exists with different UID or same email, link them
                 const existingUserDoc = querySnap.docs[0];
                 const data = existingUserDoc.data();
-                console.log("Linked user by email found:", data.email, "Role:", data.role, "Status:", data.status);
-                setUserRole(data.role || 'user');
-                setUserStatus(data.status || 'pending');
+                
+                const isDefaultMaster = u.email === "diego.martins@cmc.pr.gov.br";
+                const finalRole = isDefaultMaster ? 'master' : (data.role || 'user');
+                const finalStatus = isDefaultMaster ? 'approved' : (data.status || 'pending');
+                
+                console.log("Linked user by email found:", data.email, "Role:", finalRole, "Status:", finalStatus);
+                setUserRole(finalRole);
+                setUserStatus(finalStatus);
                 setHasAcceptedTerms(!!data.hasAcceptedTerms);
                 
-                if (data.status === 'approved' && !data.hasAcceptedTerms) {
+                if (finalStatus === 'approved' && !data.hasAcceptedTerms) {
                   setShowWelcomePopup(true);
                 }
                 
@@ -690,26 +701,7 @@ export default function App() {
                 setHasAcceptedTerms(false);
               }
             } catch (queryErr) {
-              console.error("Error querying user by email (fallback create):", queryErr);
-              // Fallback: create even if query fails (rule should allow setDoc if document doesn't exist)
-              const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
-              const role = isMasterEmail ? 'master' : 'user';
-              const status = isMasterEmail ? 'approved' : 'pending';
-              
-              try {
-                await setDoc(userRef, {
-                  ...userData,
-                  role: role,
-                  status: status,
-                  hasAcceptedTerms: false,
-                  createdAt: serverTimestamp()
-                });
-              } catch (setErr) {
-                console.error("Critical: Fallback setDoc failed:", setErr);
-              }
-              
-              setUserRole(role);
-              setUserStatus(status);
+              console.error("Error creating/linking user:", queryErr);
             }
           }
         } catch (err) {
@@ -802,7 +794,7 @@ export default function App() {
       });
       return unsubscribe;
     }
-  }, [userRole, userStatus, isAuthReady]);
+  }, [isMaster, userStatus, isAuthReady]);
 
   // Drafts Listener
   useEffect(() => {
@@ -812,7 +804,7 @@ export default function App() {
     }
 
     let q;
-    if (userRole === 'master' && view === 'admin') {
+    if (isMaster && view === 'admin') {
       q = query(collection(db, 'etps'), orderBy('updatedAt', 'desc'), limit(100));
     } else {
       q = query(
@@ -831,7 +823,7 @@ export default function App() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'etps');
     });
-  }, [user, userRole, userStatus, view]);
+  }, [user, isMaster, userStatus, view, isAuthReady]);
 
   const pendingUsersCount = sortedUsers.filter(u => u.status === 'pending').length;
 
