@@ -591,6 +591,7 @@ export default function App() {
   const [backupToImport, setBackupToImport] = useState<any | null>(null);
   const [etpSort, setEtpSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'updatedAt', direction: 'desc' });
   const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
+  const [userSearch, setUserSearch] = useState('');
   const [reassignState, setReassignState] = useState<{ draftId: string, currentEmail: string, title: string } | null>(null);
 
   const isReadOnly = isAdminViewing || formData?.status === 'completed';
@@ -615,19 +616,43 @@ export default function App() {
   }, [drafts, etpSort]);
 
   const sortedUsers = useMemo(() => {
-    // Deduplicate by ID (Firestore doc ID) which is always unique in a query result
-    const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
+    // Deduplicate by email first to handle potential duplicate documents from edge cases
+    const emailMap = new Map();
+    allUsers.forEach(u => {
+      const email = (u.email || '').toLowerCase();
+      // If duplicate, keep the one with 'approved' status if possible, otherwise keep the most recent
+      if (!emailMap.has(email)) {
+        emailMap.set(email, u);
+      } else {
+        const existing = emailMap.get(email);
+        if (u.status === 'approved' && existing.status !== 'approved') {
+          emailMap.set(email, u);
+        } else if (u.lastActive?.toMillis() > (existing.lastActive?.toMillis() || 0)) {
+          emailMap.set(email, u);
+        }
+      }
+    });
+
+    const uniqueUsers = Array.from(emailMap.values());
     
-    const sorted = uniqueUsers.sort((a, b) => {
-      let aValue = a[userSort.key];
-      let bValue = b[userSort.key];
+    // Apply search filter
+    const filtered = uniqueUsers.filter(u => {
+      const search = userSearch.toLowerCase();
+      return (u.displayName?.toLowerCase().includes(search)) || 
+             (u.email?.toLowerCase().includes(search)) ||
+             (u.uid?.toLowerCase().includes(search));
+    });
+
+    const sorted = filtered.sort((a, b) => {
+      let aValue = a[userSort.key] || '';
+      let bValue = b[userSort.key] || '';
 
       if (aValue < bValue) return userSort.direction === 'asc' ? -1 : 1;
       if (aValue > bValue) return userSort.direction === 'asc' ? 1 : -1;
       return 0;
     });
     return sorted;
-  }, [allUsers, userSort]);
+  }, [allUsers, userSort, userSearch]);
 
   const sortedTrash = useMemo(() => {
     // Deduplicate by ID
@@ -681,20 +706,40 @@ export default function App() {
       if (u) {
         setUser(u);
         try {
+          // Priority 1: Check if document exists with current UID
           const userRef = doc(db, 'users', u.uid);
-          const userSnap = await getDoc(userRef);
-          const userData = {
-            uid: u.uid,
-            email: u.email,
-            displayName: u.displayName,
-            lastActive: serverTimestamp()
-          };
+          let userSnap = await getDoc(userRef);
+          
+          // Priority 2: If not found by UID, check if document exists with same email (lowercase check)
+          if (!userSnap.exists()) {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('email', '==', (u.email || '').toLowerCase()), limit(1));
+            const querySnap = await getDocs(q);
+            
+            if (!querySnap.empty) {
+              const existingDoc = querySnap.docs[0];
+              const existingData = existingDoc.data();
+              
+              // Consolidation: Create new doc with current UID using existing data
+              await setDoc(userRef, {
+                ...existingData,
+                uid: u.uid,
+                email: (u.email || '').toLowerCase(),
+                lastActive: serverTimestamp(),
+                _consolidatedFrom: existingDoc.id
+              });
+              
+              // Optionally delete original doc if ID was different to keep unique
+              if (existingDoc.id !== u.uid) {
+                await deleteDoc(existingDoc.ref);
+              }
+              
+              userSnap = await getDoc(userRef);
+            }
+          }
 
           if (userSnap.exists()) {
             const data = userSnap.data();
-            console.log("Existing user found:", data.email, "Role:", data.role, "Status:", data.status);
-            
-            // Força privilégios master se o e-mail for o do administrador padrão
             const isDefaultMaster = u.email === "diego.martins@cmc.pr.gov.br";
             const finalRole = isDefaultMaster ? 'master' : (data.role || 'user');
             const finalStatus = isDefaultMaster ? 'approved' : (data.status || 'pending');
@@ -703,72 +748,41 @@ export default function App() {
             setUserStatus(finalStatus);
             setHasAcceptedTerms(!!data.hasAcceptedTerms);
             
-            // Show welcome popup if approved but hasn't accepted terms yet
             if (finalStatus === 'approved' && !data.hasAcceptedTerms) {
               setShowWelcomePopup(true);
             }
             
-            await updateDoc(userRef, { lastActive: serverTimestamp() });
+            await updateDoc(userRef, { 
+              lastActive: serverTimestamp(),
+              displayName: u.displayName || data.displayName,
+              email: (u.email || '').toLowerCase()
+            });
           } else {
-            // Check if user already exists by email to prevent duplication
-            try {
-              const usersRef = collection(db, 'users');
-              const q = query(usersRef, where('email', '==', u.email), limit(1));
-              const querySnap = await getDocs(q);
-              
-              if (!querySnap.empty) {
-                // User exists with different UID or same email, link them
-                const existingUserDoc = querySnap.docs[0];
-                const data = existingUserDoc.data();
-                
-                const isDefaultMaster = u.email === "diego.martins@cmc.pr.gov.br";
-                const finalRole = isDefaultMaster ? 'master' : (data.role || 'user');
-                const finalStatus = isDefaultMaster ? 'approved' : (data.status || 'pending');
-                
-                console.log("Linked user by email found:", data.email, "Role:", finalRole, "Status:", finalStatus);
-                setUserRole(finalRole);
-                setUserStatus(finalStatus);
-                setHasAcceptedTerms(!!data.hasAcceptedTerms);
-                
-                if (finalStatus === 'approved' && !data.hasAcceptedTerms) {
-                  setShowWelcomePopup(true);
-                }
-                
-                // Link current UID to existing document
-                try {
-                  await updateDoc(existingUserDoc.ref, { 
-                    lastActive: serverTimestamp(),
-                    uid: u.uid 
-                  });
-                } catch (linkErr) {
-                  console.error("Error linking UID to existing document:", linkErr);
-                }
-              } else {
-                const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
-                const role = isMasterEmail ? 'master' : 'user';
-                const status = isMasterEmail ? 'approved' : 'pending';
-                console.log("New user created:", u.email, "Role:", role, "Status:", status);
-                await setDoc(userRef, {
-                  ...userData,
-                  role: role,
-                  status: status,
-                  hasAcceptedTerms: false,
-                  createdAt: serverTimestamp()
-                });
-                setUserRole(role);
-                setUserStatus(status);
-                setHasAcceptedTerms(false);
-              }
-            } catch (queryErr) {
-              console.error("Error creating/linking user:", queryErr);
-            }
+            // Priority 3: Create totally new user
+            const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
+            const role = isMasterEmail ? 'master' : 'user';
+            const status = isMasterEmail ? 'approved' : 'pending';
+            
+            await setDoc(userRef, {
+              uid: u.uid,
+              email: (u.email || '').toLowerCase(),
+              displayName: u.displayName,
+              role: role,
+              status: status,
+              hasAcceptedTerms: false,
+              createdAt: serverTimestamp(),
+              lastActive: serverTimestamp()
+            });
+            
+            setUserRole(role);
+            setUserStatus(status);
+            setHasAcceptedTerms(false);
           }
         } catch (err) {
           console.error("Error initializing user data:", err);
           setApiError("Erro ao inicializar dados do usuário.");
         }
       } else {
-        // Reset ALL user states on sign out
         setUser(null);
         setUserRole('user');
         setUserStatus('pending');
@@ -1160,6 +1174,49 @@ export default function App() {
       setConfirmDeleteCheckbox(false);
     } catch (err: any) {
       handleFirestoreError(err, OperationType.DELETE, 'users');
+    }
+  };
+
+  const consolidateUsers = async () => {
+    if (userRole !== 'master') return;
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const allUsersData = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const emailGroups: Record<string, any[]> = {};
+      allUsersData.forEach((u: any) => {
+        const email = (u.email || '').toLowerCase();
+        if (!emailGroups[email]) emailGroups[email] = [];
+        emailGroups[email].push(u);
+      });
+
+      let updatedCount = 0;
+      for (const email in emailGroups) {
+        const group = emailGroups[email];
+        if (group.length > 1) {
+          // Find the best document to keep (approved > most recent active)
+          const best = group.sort((a, b) => {
+            if (a.status === 'approved' && b.status !== 'approved') return -1;
+            if (b.status === 'approved' && a.status !== 'approved') return 1;
+            return (b.lastActive?.toMillis() || 0) - (a.lastActive?.toMillis() || 0);
+          })[0];
+
+          // Merge data and delete others
+          for (const u of group) {
+            if (u.id !== best.id) {
+              await deleteDoc(doc(db, 'users', u.id));
+              updatedCount++;
+            }
+          }
+        }
+      }
+      setApiError(`Consolidação concluída. ${updatedCount} registros duplicados removidos.`);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.UPDATE, 'users');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -2626,6 +2683,13 @@ export default function App() {
             <Icon name="Download" size={16} /> <span className="hidden sm:inline">Exportar Backup</span><span className="sm:hidden">Exportar</span>
           </button>
           <button 
+            onClick={consolidateUsers}
+            className="flex-1 sm:flex-none justify-center bg-indigo-50 text-indigo-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-indigo-100 transition-all border border-indigo-100"
+            title="Resolver inconsistências e duplicados de e-mail"
+          >
+            <Icon name="Users" size={16} /> <span className="hidden sm:inline">Consolidar</span><span className="sm:hidden">Sincronizar</span>
+          </button>
+          <button 
             onClick={migrateEtpStatusToInProgress}
             className="flex-1 sm:flex-none justify-center bg-amber-50 text-amber-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-amber-100 transition-all border border-amber-100"
             title="Normalizar todos os rascunhos para 'Em Edição'"
@@ -2655,25 +2719,42 @@ export default function App() {
         </motion.div>
       )}
 
-      <div className="flex flex-wrap gap-1 mb-8 bg-slate-100 p-1 rounded-2xl w-full sm:w-fit">
-        <button 
-          onClick={() => setAdminTab('etps')}
-          className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'etps' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-        >
-          Documentos
-        </button>
-        <button 
-          onClick={() => setAdminTab('users')}
-          className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-        >
-          Usuários
-        </button>
-        <button 
-          onClick={() => setAdminTab('trash')}
-          className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'trash' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-        >
-          Lixeira
-        </button>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-fit">
+          <button 
+            onClick={() => setAdminTab('etps')}
+            className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'etps' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Documentos
+          </button>
+          <button 
+            onClick={() => setAdminTab('users')}
+            className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Usuários
+          </button>
+          <button 
+            onClick={() => setAdminTab('trash')}
+            className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'trash' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Lixeira
+          </button>
+        </div>
+
+        {adminTab === 'users' && (
+          <div className="relative w-full sm:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <Icon name="Search" size={14} />
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar por nome ou e-mail..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm"
+            />
+          </div>
+        )}
       </div>
 
       {adminTab === 'etps' ? (
