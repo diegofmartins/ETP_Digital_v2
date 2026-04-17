@@ -1185,8 +1185,17 @@ export default function App() {
         users: allUsersData
       };
       
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      
+      const filename = `ETP_DIGITAL_FULL_BACKUP_-_${year}_${month}_${day}_${hours}_${minutes}.json`;
+      
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      saveAs(blob, `ETP_DIGITAL_FULL_BACKUP_${new Date().toISOString().split('T')[0]}.json`);
+      saveAs(blob, filename);
     } catch (err: any) {
       handleFirestoreError(err, OperationType.LIST, 'backup');
     } finally {
@@ -1752,7 +1761,10 @@ export default function App() {
       });
 
       const blob = await Packer.toBlob(doc);
-      saveAs(blob, `ETP_${formData.etp_name || 'Digital'}.docx`);
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_');
+      const filename = `${(formData.etp_name || 'ETP_Digital').replace(/[/\\?%*:|"<>]/g, '_')}_-_${dateStr}.docx`;
+      saveAs(blob, filename);
     } catch (err: any) {
       console.error("Erro ao exportar DOCX:", err);
       setApiError("Erro ao exportar DOCX. Verifique se os dados estão corretos.");
@@ -1761,12 +1773,16 @@ export default function App() {
 
   const handlePrint = () => {
     if (!formData) return;
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_');
+    const filename = `${(formData.etp_name || 'ETP_Digital').replace(/[/\\?%*:|"<>]/g, '_')}_-_${dateStr}`;
+    
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
         <html>
           <head>
-            <title>ETP DIGITAL</title>
+            <title>${filename}</title>
             <style>
               body { font-family: "Inter", sans-serif; padding: 2cm; color: #1a1a1a; line-height: 1.6; }
               .doc-container { max-width: 21cm; margin: 0 auto; }
