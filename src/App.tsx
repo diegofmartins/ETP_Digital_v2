@@ -33,6 +33,7 @@ Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP
 8. FORMATAÇÃO E REGRAS DE ESCRITA:
    - NÃO use markdown (não use # para títulos, não use * ou ** para negrito/itálico).
    - NÃO inclua introduções, saudações ou comentários.
+   - NÃO inclua o nome da seção ou o título do campo no início do texto gerado.
    - NÃO repita as mesmas frases ou justificativas em múltiplos campos.
    - Retorne APENAS o texto que será inserido diretamente no documento final.
    - Use listas com hífens (-) para clareza quando necessário.
@@ -40,6 +41,11 @@ Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP
 
 9. REGRA DE EXCLUSÃO:
    - NUNCA gere conteúdo para o campo "assinaturas" (Assinaturas). Este campo deve permanecer vazio para preenchimento manual do usuário.
+
+10. REGRAS PARA CAMPOS DE TABELA (MUITO IMPORTANTE):
+   - Os campos "tabela_estimativa_quantitativos_precos", "tabela_riscos_interna" e "tabela_riscos_externa" DEVEM obrigatoriamente retornar uma tabela em HTML puro, seguindo EXATAMENTE a estrutura de bordas e cores das tabelas modelo (use border: 1px solid #000 e background-color: #e2e8f0 para cabeçalhos).
+   - Para tabelas de riscos, marque a Probabilidade e o Impacto com "( x )" na célula correspondente e "( )" nas demais.
+   - Não use classes CSS externas, apenas estilos inline (style="...").
 
 REGRA CRÍTICA DE PREENCHIMENTO:
 Se os dados fornecidos no Diagnóstico Inicial forem insuficientes para gerar um conteúdo técnico completo e preciso para um determinado campo, você DEVE:
@@ -456,6 +462,38 @@ const FileUploader = ({ value, onChange, readOnly = false }: { value: string, on
       {!readOnly && <p className="text-[10px] text-slate-400 italic">Formatos aceitos: JPG, PNG. Máximo 1MB por imagem.</p>}
     </div>
   );
+};
+
+const TABLE_TEMPLATES = {
+  quantitativos: `
+    <table style="border-collapse:collapse;width:100%;border:1px solid #000">
+      <thead>
+        <tr style="background-color:#e2e8f0"><th style="border:1px solid #000;padding:8px;text-align:center">Item</th><th style="border:1px solid #000;padding:8px;text-align:center">Descrição</th><th style="border:1px solid #000;padding:8px;text-align:center">Quantidade</th><th style="border:1px solid #000;padding:8px;text-align:center">Valor Unitário</th><th style="border:1px solid #000;padding:8px;text-align:center">Valor Total</th></tr>
+      </thead>
+      <tbody>
+        <!-- Gerar linhas aqui -->
+      </tbody>
+      <tfoot>
+        <tr style="background-color:#e2e8f0;font-weight:bold"><td colspan="4" style="border:1px solid #000;padding:8px;text-align:center uppercase">TOTAL ESTIMADO</td><td style="border:1px solid #000;padding:8px;text-align:center">R$ [Soma Total]</td></tr>
+      </tfoot>
+    </table>
+  `,
+  riscos: (fase: 'INTERNA' | 'EXTERNA') => `
+    <table style="border-collapse:collapse;width:100%;border:1px solid #000">
+      <thead>
+        <tr style="background-color:#e2e8f0"><th style="border:1px solid #000;padding:8px;text-align:right;width:15%">FASE:</th><th colspan="4" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">${fase}</th></tr>
+        <tr style="background-color:#e2e8f0"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">Riscos referente a fase de análise escolhida:</th></tr>
+      </thead>
+      <tbody>
+        <!-- Para cada risco, gerar este bloco -->
+        <tr style="background-color:#f1f5f9"><th colspan="5" style="border:1px solid #000;padding:8px;text-align:center;font-weight:bold">RISCO [N]</th></tr>
+        <tr><td style="border:1px solid #000;padding:8px;font-weight:bold;width:20%">Situação de Risco:</td><td colspan="4" style="border:1px solid #000;padding:8px">[Descrever Risco]</td></tr>
+        <tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Probabilidade:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixa</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Média</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alta</td></tr>
+        <tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Impacto:</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Baixo</td><td style="border:1px solid #000;padding:8px;text-align:center">( ) Médio</td><td colspan="2" style="border:1px solid #000;padding:8px;text-align:center">( ) Alto</td></tr>
+        <tr><td style="border:1px solid #000;padding:8px;font-weight:bold">Plano de Mitigação:</td><td colspan="4" style="border:1px solid #000;padding:8px">[Descrever Mitigação]</td></tr>
+      </tbody>
+    </table>
+  `
 };
 
 const INITIAL_STATE: ETPData = {
@@ -1275,16 +1313,26 @@ export default function App() {
       - Riscos: ${formData.diag_riscos_sucesso}
       `;
 
+      let tableInstruction = '';
+      if (fieldId === 'tabela_estimativa_quantitativos_precos') {
+        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para os quantitativos e precos seguindo este modelo:\n${TABLE_TEMPLATES.quantitativos}`;
+      } else if (fieldId === 'tabela_riscos_interna') {
+        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase INTERNA seguindo este modelo:\n${TABLE_TEMPLATES.riscos('INTERNA')}`;
+      } else if (fieldId === 'tabela_riscos_externa') {
+        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase EXTERNA seguindo este modelo:\n${TABLE_TEMPLATES.riscos('EXTERNA')}`;
+      }
+
       const prompt = `Com base no DIAGNÓSTICO INICIAL abaixo:
       ${diagnosticInfo}
       
       Redija a seção "${fieldName}" deste Estudo Técnico Preliminar conforme a Lei 14.133/21. 
-      Siga as instruções da CMC: ${field?.instruction || ''}
+      Siga as instruções da CMC: ${field?.instruction || ''}${tableInstruction}
       
       REGRAS CRÍTICAS: 
+      - NÃO inclua o título "${fieldName}" ou o nome da seção no texto. 
       - NÃO use markdown (#, *, **). 
       - NÃO inclua introduções ou comentários. 
-      - Retorne APENAS o texto final.
+      - Retorne APENAS o texto final (ou HTML da tabela se aplicável).
       - Se as informações forem insuficientes para um texto técnico completo, você DEVE iniciar a resposta com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ] indicando o que falta.`;
 
       const response = await ai.models.generateContent({
@@ -1344,6 +1392,13 @@ export default function App() {
       - Riscos: ${formData.diag_riscos_sucesso}
       `;
 
+      const tableInstructions = `
+      Para os campos de tabela abaixo, você DEVE gerar HTML seguindo estes modelos:
+      - tabela_estimativa_quantitativos_precos: ${TABLE_TEMPLATES.quantitativos}
+      - tabela_riscos_interna: ${TABLE_TEMPLATES.riscos('INTERNA')}
+      - tabela_riscos_externa: ${TABLE_TEMPLATES.riscos('EXTERNA')}
+      `;
+
       const prompt = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba. 
       Sua missão é garantir que o ETP seja um documento COESO, sem repetições e com textos diretos.
       
@@ -1362,10 +1417,11 @@ export default function App() {
       - Mantenha os textos CURTOS, TÉCNICOS e focados no que é essencial para cada seção.
       - O "Planejamento Estratégico 2022-2031" deve ser citado APENAS na seção de Alinhamento ao Planejamento.
       - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo, inicie o texto desse campo com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
+      ${tableInstructions}
       
       Retorne obrigatoriamente um JSON puro com os campos processados. 
       ${!fillEmpty ? 'No JSON de retorno, inclua APENAS os campos que já estavam preenchidos.' : 'No JSON de retorno, inclua TODOS os campos solicitados, especialmente os que estavam vazios.'}
-      REGRAS CRÍTICAS: NÃO use markdown (#, *, **). NÃO inclua introduções ou comentários nos campos. Retorne APENAS o texto final para cada campo.`;
+      REGRAS CRÍTICAS: NÃO use markdown (#, *, **). NÃO inclua introduções ou comentários nos campos. NÃO inclua o nome do campo ou títulos dentro do conteúdo de cada campo. Retorne APENAS o texto final para cada campo (ou HTML da tabela se aplicável).`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
