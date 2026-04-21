@@ -506,7 +506,7 @@ const TABLE_TEMPLATES = {
 };
 
 const INITIAL_STATE: ETPData = {
-  etp_name: 'Novo Estudo Técnico Preliminar',
+  etp_name: 'Novo Estudo (VIABILIZA)',
   diag_problema_necessidade: '', diag_alternativas_solucao: '', diag_objeto_vigencia: '', diag_exigencias_padroes: '',
   diag_quantidades_valor: '', diag_parcelamento_providencias: '', diag_correlatas_ambientais: '', diag_riscos_sucesso: '',
   processo_spae: '', unidade_requisitante: '', responsavel: '',
@@ -2055,7 +2055,9 @@ export default function App() {
           <div className="bg-indigo-600 w-20 h-20 rounded-3xl flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-indigo-200">
             <Icon name="Wand2" size={40} />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">ETP DIGITAL v2</h1>
+          <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight uppercase">
+            V<span className="text-indigo-600">IA</span>BILIZA
+          </h1>
           <p className="text-slate-500 mb-10 leading-relaxed">
             Acesse com sua conta institucional para gerenciar seus Estudos Técnicos Preliminares.
           </p>
@@ -3197,7 +3199,9 @@ export default function App() {
                 <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shrink-0">
                   <Icon name="Wand2" size={18} />
                 </div>
-                <h1 className="text-sm font-black uppercase tracking-tight truncate">ETP DIGITAL</h1>
+                <h1 className="text-sm font-black uppercase tracking-tight truncate">
+                  V<span className="text-indigo-600">IA</span>BILIZA
+                </h1>
               </div>
               <div className="flex items-center gap-2 sm:gap-4">
                 <div className="text-right hidden md:block shrink-0">
