@@ -1660,7 +1660,7 @@ export default function App() {
               basedOn: "Normal",
               next: "Normal",
               quickFormat: true,
-              run: { size: 21, font: "Inter" },
+              run: { size: 21, font: "Arial" },
               paragraph: { spacing: { line: 360 } },
             },
             {
@@ -1669,7 +1669,7 @@ export default function App() {
               basedOn: "Normal",
               next: "Normal",
               quickFormat: true,
-              run: { size: 36, bold: true, color: "000000" },
+              run: { size: 36, bold: true, font: "Arial", color: "000000" },
               paragraph: { alignment: AlignmentType.CENTER, border: { bottom: { style: "single", size: 12, color: "000000" } }, spacing: { after: 400 } },
             },
             {
@@ -1678,7 +1678,7 @@ export default function App() {
               basedOn: "Normal",
               next: "Normal",
               quickFormat: true,
-              run: { size: 24, bold: true, color: "000000" },
+              run: { size: 24, bold: true, font: "Arial", color: "000000" },
               paragraph: { 
                 shading: { fill: "F0F0F0" }, 
                 border: { top: { style: "single", size: 6 }, bottom: { style: "single", size: 6 }, left: { style: "single", size: 6 }, right: { style: "single", size: 6 } },
@@ -1691,7 +1691,7 @@ export default function App() {
               basedOn: "Normal",
               next: "Normal",
               quickFormat: true,
-              run: { size: 22, bold: true, color: "000000" },
+              run: { size: 22, bold: true, font: "Arial", color: "000000" },
               paragraph: { 
                 border: { bottom: { style: "single", size: 6, color: "EEEEEE" } },
                 spacing: { before: 300, after: 100 } 
@@ -1964,7 +1964,7 @@ export default function App() {
           <head>
             <title>${filename}</title>
             <style>
-              body { font-family: "Inter", sans-serif; padding: 2cm; color: #1a1a1a; line-height: 1.6; }
+              body { font-family: "Arial", sans-serif; padding: 2cm; color: #1a1a1a; line-height: 1.6; }
               .doc-container { max-width: 21cm; margin: 0 auto; }
               .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }
               .header h1 { font-size: 18pt; margin: 0; text-transform: uppercase; }
@@ -2807,20 +2807,24 @@ export default function App() {
           >
             <Icon name="Download" size={16} /> <span className="hidden sm:inline">Exportar Backup</span><span className="sm:hidden">Exportar</span>
           </button>
-          <button 
-            onClick={consolidateUsers}
-            className="flex-1 sm:flex-none justify-center bg-indigo-50 text-indigo-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-indigo-100 transition-all border border-indigo-100"
-            title="Resolver inconsistências e duplicados de e-mail"
-          >
-            <Icon name="Users" size={16} /> <span className="hidden sm:inline">Consolidar</span><span className="sm:hidden">Sincronizar</span>
-          </button>
-          <button 
-            onClick={migrateEtpStatusToInProgress}
-            className="flex-1 sm:flex-none justify-center bg-amber-50 text-amber-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-amber-100 transition-all border border-amber-100"
-            title="Normalizar todos os rascunhos para 'Em Edição'"
-          >
-            <Icon name="RefreshCcw" size={16} /> <span className="hidden sm:inline">Normalizar</span><span className="sm:hidden">Corrigir</span>
-          </button>
+          {false && (
+            <>
+              <button 
+                onClick={consolidateUsers}
+                className="flex-1 sm:flex-none justify-center bg-indigo-50 text-indigo-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-indigo-100 transition-all border border-indigo-100"
+                title="Resolver inconsistências e duplicados de e-mail"
+              >
+                <Icon name="Users" size={16} /> <span className="hidden sm:inline">Consolidar</span><span className="sm:hidden">Sincronizar</span>
+              </button>
+              <button 
+                onClick={migrateEtpStatusToInProgress}
+                className="flex-1 sm:flex-none justify-center bg-amber-50 text-amber-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-amber-100 transition-all border border-amber-100"
+                title="Normalizar todos os rascunhos para 'Em Edição'"
+              >
+                <Icon name="RefreshCcw" size={16} /> <span className="hidden sm:inline">Normalizar</span><span className="sm:hidden">Corrigir</span>
+              </button>
+            </>
+          )}
           <button 
             onClick={() => setView('dashboard')}
             className="flex-1 sm:flex-none justify-center bg-slate-100 text-slate-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
@@ -3714,6 +3718,7 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
+                style={{ fontFamily: 'Arial, sans-serif' }}
                 className="bg-white shadow-2xl p-16 border border-slate-200 max-w-4xl mx-auto etp-doc rounded-3xl"
               >
                 <div className="text-center mb-12 border-b-2 border-black pb-8">
@@ -3811,7 +3816,7 @@ export default function App() {
             )}
           </main>
 
-          <div className="print-only etp-doc">
+          <div className="print-only etp-doc" style={{ fontFamily: 'Arial, sans-serif' }}>
             <div style={{textAlign: 'center', marginBottom: '40px', borderBottom: '2px solid black', paddingBottom: '20px'}}>
               <h1 style={{fontSize: '16pt', fontWeight: 'bold', textTransform: 'uppercase'}}>Estudo Técnico Preliminar</h1>
               <p style={{fontSize: '10pt'}}>Administração Pública Direta e Indireta - Lei 14.133/21</p>
