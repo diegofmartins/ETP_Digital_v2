@@ -20,6 +20,8 @@ import {
   serverTimestamp, getDoc, addDoc, limit, getDocs, orderBy, writeBatch 
 } from "firebase/firestore";
 
+const SYSTEM_VERSION = "2.4.0";
+
 const SYSTEM_PROMPT = `Você é um Especialista em Contratações Públicas da Câmara Municipal de Curitiba (CMC), com profundo conhecimento da Lei 14.133/2021.
 Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP) seguindo RIGOROSAMENTE as diretrizes abaixo:
 
@@ -3852,13 +3854,14 @@ export default function App() {
               </motion.div>
             )}
           </AnimatePresence>
-          <footer className="mt-8 py-6 text-center no-print border-t border-slate-100">
-            <p className="text-[9px] text-slate-300 font-medium tracking-tight">
-              Elaborado por Diego Martins, Diretoria de Contratações, 2026. Versão 2.1.5, atualizado em 16/04/2026 - 10:25
-            </p>
-          </footer>
         </div>
       )}
+      
+      <footer className="py-6 text-center no-print border-t border-slate-100 bg-slate-50/50">
+        <p className="text-[10px] text-slate-400 font-medium tracking-tight uppercase">
+          Elaborado pela Diretoria de Contratações • Versão {SYSTEM_VERSION}
+        </p>
+      </footer>
     </div>
   );
 }
