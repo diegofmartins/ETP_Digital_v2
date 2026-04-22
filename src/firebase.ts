@@ -1,21 +1,21 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer, Firestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, doc, getDocFromServer, Firestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+// Initialize App only if not already initialized
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
-// Use initializeFirestore with experimentalForceLongPolling and the specific database ID
+// Initialize Firestore only if not already initialized
 let firestoreInstance: Firestore;
 try {
+  // Try to initialize with specific settings
   firestoreInstance = initializeFirestore(app, {
     experimentalForceLongPolling: true,
   }, firebaseConfig.firestoreDatabaseId);
-} catch (e) {
-  // If already initialized, we should try to get the existing one
-  console.warn("Firestore already initialized, skipping initialization settings.");
-  const { getFirestore } = await import('firebase/firestore');
+} catch (e: any) {
+  // If already initialized (e.g. during HMR or multiple imports), just get the existing instance
   firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 }
 
