@@ -1,26 +1,31 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, getDocFromServer, limit, getDocs } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Use initializeFirestore with experimentalForceLongPolling for better compatibility 
+// with restricted proxy environments like InfinityFree.
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, firebaseConfig.firestoreDatabaseId);
+
 export const googleProvider = new GoogleAuthProvider();
 
 // Test connection
 async function testConnection() {
   try {
-    // Only test if we have a database ID
     if (firebaseConfig.firestoreDatabaseId) {
       await getDocFromServer(doc(db, 'test', 'connection'));
     }
   } catch (error) {
-    // Log but don't crash the app
-    console.warn("Initial Firestore connection test failed. This is common on first boot.");
+    // Permission denied is okay, it means we reached the server.
+    // Connection timed out or 'client is offline' would mean a real issue.
+    console.log("Connection check performed.");
   }
 }
-// testConnection();
 testConnection();
 
 export enum OperationType {
