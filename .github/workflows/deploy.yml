@@ -1,30 +1,13 @@
-# Workflow para implantar conteúdo estático no GitHub Pages
-name: Deploy static content to Pages
+# Workflow para implantar conteúdo no InfinityFree via FTP
+name: Deploy to InfinityFree
 
 on:
-  # Roda ao fazer push na branch principal
   push:
     branches: ["main"]
-
-  # Permite rodar manualmente pela aba Actions
   workflow_dispatch:
-
-# Define as permissões do GITHUB_TOKEN para permitir a implantação
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Permite apenas uma implantação simultânea
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,15 +27,13 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-        
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: 📂 Sync files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          # Pasta onde o Vite gera os arquivos prontos
-          path: './dist'
-          
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          local-dir: ./dist/
+          server-dir: ./htdocs/ # InfinityFree geralmente usa htdocs como raiz pública
+
