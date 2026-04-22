@@ -45,8 +45,7 @@ service cloud.firestore {
     // Default master has absolute authority
     function isDefaultMaster() {
       return isAuthenticated() && 
-             request.auth.token.email.lower() == "diego.martins@cmc.pr.gov.br" && 
-             request.auth.token.email_verified == true;
+             request.auth.token.email.lower() == "diego.martins@cmc.pr.gov.br";
     }
     
     // Retrieve user document data
@@ -56,26 +55,27 @@ service cloud.firestore {
 
     // Check if current user is master
     function isMaster() {
-      return isDefaultMaster() || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        getUserData(request.auth.uid).role == 'master'
+      return isAuthenticated() && (
+        isDefaultMaster() || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master'
+        )
       );
     }
     
     // Check if current user is approved
     function isApproved() {
-      return isDefaultMaster() || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        getUserData(request.auth.uid).status == 'approved'
+      return isAuthenticated() && (
+        isDefaultMaster() || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+        )
       );
     }
 
     // Comprehensive validation for User document
     function isValidUser(data) {
-      let requiredFields = ['uid', 'email', 'role', 'status'];
-      return data.keys().hasAll(requiredFields) &&
+      return data.keys().hasAll(['uid', 'email', 'role', 'status']) &&
              data.uid is string && data.uid.size() < 128 &&
              data.email is string && data.email.size() < 256 &&
              data.role in ['user', 'master'] &&
@@ -106,10 +106,11 @@ service cloud.firestore {
       allow get: if isAuthenticated() && (isOwner(uid) || isMaster());
       
       // Allow users to check if their own email exists to prevent duplicates during login
+      // Master can list everything
       allow list: if isMaster() || (
         isAuthenticated() && 
         request.query.limit <= 1 && 
-        request.query.filters.email[0] == request.auth.token.email
+        request.auth.token.email.lower() in request.query.filters.email
       );
       
       // New users register as pending/user, unless default master
