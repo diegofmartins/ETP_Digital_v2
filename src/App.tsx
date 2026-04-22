@@ -844,6 +844,35 @@ export default function App() {
   // Master check also considers the default master email
   const isMaster = userRole === 'master' || user?.email === "diego.martins@cmc.pr.gov.br";
 
+  // User Profile Sync (Updates role/status in real-time)
+  useEffect(() => {
+    if (!user || !isAuthReady) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const cleanEmail = (user.email || '').toLowerCase().trim();
+        const isDefaultMaster = cleanEmail === "diego.martins@cmc.pr.gov.br";
+        
+        setUserRole(isDefaultMaster ? 'master' : (data.role || 'user'));
+        setUserStatus(isDefaultMaster ? 'approved' : (data.status || 'pending'));
+        setHasAcceptedTerms(!!data.hasAcceptedTerms);
+      } else {
+        // Doc deleted, reset to pending
+        const cleanEmail = (user.email || '').toLowerCase().trim();
+        const isDefaultMaster = cleanEmail === "diego.martins@cmc.pr.gov.br";
+        if (!isDefaultMaster) {
+          setUserRole('user');
+          setUserStatus('pending');
+        }
+      }
+    }, (err) => {
+      console.warn("User profile sync error:", err);
+    });
+
+    return unsubscribe;
+  }, [user?.uid, isAuthReady]);
+
   // Users Listener (Master only)
   useEffect(() => {
     if (isMaster && userStatus === 'approved' && isAuthReady) {
@@ -949,18 +978,11 @@ export default function App() {
 
   const handleLogout = async () => {
     if (user) {
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          // Set lastActive to null on logout to show as offline
-          await updateDoc(userRef, {
-            lastActive: null
-          });
-        }
-      } catch (e) {
-        console.error("Error clearing presence on logout", e);
-      }
+      // Non-blocking attempt to clear presence
+      const userRef = doc(db, "users", user.uid);
+      updateDoc(userRef, { lastActive: null }).catch((e) =>
+        console.error("Error clearing presence on logout", e)
+      );
     }
     await signOut(auth);
     setView('dashboard');
@@ -2295,7 +2317,7 @@ export default function App() {
               </button>
               <button 
                 disabled={!confirmDeleteCheckbox}
-                onClick={() => deleteUser(userToDelete.uid)}
+                onClick={() => deleteUser(userToDelete.id)}
                 className={`flex-1 px-6 py-3 rounded-xl text-xs font-bold text-white transition-all shadow-lg ${confirmDeleteCheckbox ? 'bg-red-600 hover:bg-red-700 shadow-red-200' : 'bg-slate-300 cursor-not-allowed shadow-none'}`}
               >
                 Sim, Excluir
@@ -3248,8 +3270,8 @@ export default function App() {
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{userRole === 'master' ? 'Master' : 'Servidor'}</div>
                   <div className="text-xs font-bold text-slate-700">{user.displayName}</div>
                 </div>
-                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-600 transition-colors shrink-0">
-                  <Icon name="X" size={20} />
+                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-600 transition-colors shrink-0" title="Sair">
+                  <Icon name="LogOut" size={20} />
                 </button>
               </div>
             </div>
