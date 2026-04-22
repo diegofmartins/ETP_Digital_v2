@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>VIABILIZA</title>
+    <style>
+      #root:empty::before {
+        content: 'Carregando Aplicativo...';
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        font-family: sans-serif;
+        color: #64748b;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

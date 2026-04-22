@@ -557,6 +557,15 @@ const formatDateLong = (isoDate: string) => {
 };
 
 export default function App() {
+  useEffect(() => {
+    const handleError = (e: ErrorEvent) => {
+      console.error("Global Error Caught:", e.error);
+      setApiError(`Erro fatal no sistema: ${e.message || 'Erro desconhecido'}`);
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userRole, setUserRole] = useState<'user' | 'master'>('user');
   const [userStatus, setUserStatus] = useState<'pending' | 'approved' | 'disabled'>('pending');
