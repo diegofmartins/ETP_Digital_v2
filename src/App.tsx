@@ -1821,7 +1821,12 @@ export default function App() {
                 // Left signature
                 const [leftName, leftDept] = left.split(',').map(s => s.trim());
                 rowChildren.push(new DocxTableCell({
-                  borders: { top: { style: "single", size: 6 } },
+                  borders: {
+                    top: { style: "none" },
+                    bottom: { style: "none" },
+                    left: { style: "none" },
+                    right: { style: "none" },
+                  },
                   children: [
                     new Paragraph({
                       children: [new TextRun({ text: (leftName || "").toUpperCase(), size: 18, bold: true })],
@@ -1838,7 +1843,12 @@ export default function App() {
                 if (right) {
                   const [rightName, rightDept] = right.split(',').map(s => s.trim());
                   rowChildren.push(new DocxTableCell({
-                    borders: { top: { style: "single", size: 6 } },
+                    borders: {
+                      top: { style: "none" },
+                      bottom: { style: "none" },
+                      left: { style: "none" },
+                      right: { style: "none" },
+                    },
                     children: [
                       new Paragraph({
                         children: [new TextRun({ text: (rightName || "").toUpperCase(), size: 18, bold: true })],
@@ -1870,6 +1880,14 @@ export default function App() {
                 }),
                 new DocxTable({
                   width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: {
+                    top: { style: "none" },
+                    bottom: { style: "none" },
+                    left: { style: "none" },
+                    right: { style: "none" },
+                    insideHorizontal: { style: "none" },
+                    insideVertical: { style: "none" },
+                  },
                   rows: rows,
                 }),
               ];
@@ -1915,7 +1933,7 @@ export default function App() {
               .info-label { font-weight: bold; font-size: 9pt; text-transform: uppercase; display: block; margin-bottom: 4px; }
               .info-value { font-size: 10pt; }
               .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 60px; }
-              .signature-box { border-top: 1px solid #000; padding-top: 8px; text-align: center; font-size: 9pt; }
+              .signature-box { border-top: none; padding-top: 8px; text-align: center; font-size: 9pt; }
               .tiptap-content table { border-collapse: collapse; width: 100%; margin: 10px 0; }
               .tiptap-content td, .tiptap-content th { border: 1px solid #000; padding: 5px; text-align: left; font-size: 10pt; }
               .tiptap-content th { background: #f5f5f5; }
@@ -3738,7 +3756,7 @@ export default function App() {
                     .map((line, idx) => {
                       const [name, dept] = line.split(',').map(s => s.trim());
                       return (
-                        <div key={idx} className="border-t border-black pt-2 text-center">
+                        <div key={idx} className="pt-2 text-center">
                           <p className="text-xs font-black uppercase">{name || ""}</p>
                           <p className="text-[10px] text-slate-500 font-bold uppercase">{dept || ""}</p>
                         </div>
@@ -3801,7 +3819,7 @@ export default function App() {
                 .map((line, idx) => {
                   const [name, dept] = line.split(',').map(s => s.trim());
                   return (
-                    <div key={idx} style={{ borderTop: '1px solid black', paddingTop: '8px', textAlign: 'center', fontSize: '10pt' }}>
+                    <div key={idx} style={{ borderTop: 'none', paddingTop: '8px', textAlign: 'center', fontSize: '10pt' }}>
                       <strong>{(name || "").toUpperCase()}</strong><br/>
                       {dept || ""}
                     </div>
