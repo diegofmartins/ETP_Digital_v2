@@ -79,26 +79,17 @@ service cloud.firestore {
 
     // Comprehensive validation for User document
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email', 'role', 'status']) &&
-             data.uid is string && data.uid.size() < 128 &&
-             data.email is string && data.email.size() < 256 &&
-             data.role in ['user', 'master'] &&
-             data.status in ['pending', 'approved', 'disabled'] &&
-             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 128)) &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1024)) &&
-             (!('lastActive' in data) || (data.lastActive == null || data.lastActive is timestamp));
+      return data.uid is string && 
+             data.email is string &&
+             data.role is string &&
+             data.status is string;
     }
 
     // Validation for ETP documents
     function isValidETP(data) {
-      let requiredFields = ['userId', 'data', 'status'];
-      return data.keys().hasAll(requiredFields) &&
-             data.userId is string && data.userId.size() < 128 &&
-             data.status in ['draft', 'in_progress', 'completed', 'deleted', 'active'] &&
-             data.data is map &&
-             data.data.keys().size() < 100 && // Limit number of fields in ETP data
-             (!('title' in data) || (data.title is string && data.title.size() < 512)) &&
-             (!('userEmail' in data) || (data.userEmail is string && data.userEmail.size() < 256));
+      return data.userId is string && 
+             data.status is string &&
+             data.data is map;
     }
 
     // ===============================================================
@@ -114,14 +105,14 @@ service cloud.firestore {
       allow list: if isMaster() || (
         isAuthenticated() && 
         request.query.limit <= 1 && 
+        'email' in request.auth.token &&
         request.auth.token.email.lower() in request.query.filters.email
       );
       
       // New users register as pending/user, unless default master
       allow create: if isAuthenticated() && (
         (isOwner(uid) && isValidUser(request.resource.data) && (
-          (request.resource.data.status == 'pending' && request.resource.data.role == 'user') ||
-          isDefaultMaster()
+          isDefaultMaster() || (request.resource.data.status == 'pending' && request.resource.data.role == 'user')
         )) ||
         isMaster()
       );

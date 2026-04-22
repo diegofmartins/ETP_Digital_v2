@@ -786,9 +786,10 @@ export default function App() {
             setUserStatus(status);
             setHasAcceptedTerms(false);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("Error initializing user data:", err);
-          setApiError("Erro ao inicializar dados do usuário.");
+          const detail = err.message || JSON.stringify(err);
+          setApiError(`Erro ao inicializar dados do usuário: ${detail.substring(0, 100)}...`);
         }
       } else {
         setUser(null);
