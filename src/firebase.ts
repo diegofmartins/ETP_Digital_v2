@@ -1,18 +1,35 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, doc, getDocFromServer, Firestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Use initializeFirestore with experimentalForceLongPolling for better compatibility 
-// with restricted proxy environments like InfinityFree.
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-}, firebaseConfig.firestoreDatabaseId);
+// Use initializeFirestore with experimentalForceLongPolling and the specific database ID
+let firestoreInstance: Firestore;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  }, firebaseConfig.firestoreDatabaseId);
+} catch (e) {
+  // If already initialized, we should try to get the existing one
+  console.warn("Firestore already initialized, skipping initialization settings.");
+  const { getFirestore } = await import('firebase/firestore');
+  firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
 
+export const db = firestoreInstance;
 export const googleProvider = new GoogleAuthProvider();
+
+// Add a global error listener for catching unhandled firestore errors
+if (typeof window !== 'undefined') {
+  (window as any)._firestoreDebug = {
+    db,
+    config: firebaseConfig,
+    lastError: null
+  };
+}
 
 // Test connection
 async function testConnection() {
@@ -20,10 +37,8 @@ async function testConnection() {
     if (firebaseConfig.firestoreDatabaseId) {
       await getDocFromServer(doc(db, 'test', 'connection'));
     }
-  } catch (error) {
-    // Permission denied is okay, it means we reached the server.
-    // Connection timed out or 'client is offline' would mean a real issue.
-    console.log("Connection check performed.");
+  } catch (error: any) {
+    console.log("Connectivity check:", error.code || error.message);
   }
 }
 testConnection();

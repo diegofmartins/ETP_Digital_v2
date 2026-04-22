@@ -712,23 +712,27 @@ export default function App() {
       
       if (u) {
         setUser(u);
+        const cleanEmail = (u.email || '').toLowerCase().trim();
+        console.log(`[Auth] Usuário logado: ${cleanEmail} (UID: ${u.uid})`);
+        
         try {
           // Priority 1: Check if document exists with current UID
           const userRef = doc(db, 'users', u.uid);
+          console.log(`[Auth] Verificando existência do doc para UID: ${u.uid}`);
           let userSnap = await getDoc(userRef);
 
-          // Priority 2: If not found by UID, check if document exists with same email (lowercase check)
+          // Priority 2: If not found by UID, check if document exists with same email
           if (!userSnap.exists()) {
+            console.log(`[Auth] Doc não encontrado por UID. Buscando por e-mail: ${cleanEmail}`);
             const usersRef = collection(db, 'users');
-            const cleanEmail = (u.email || '').toLowerCase().trim();
             const q = query(usersRef, where('email', '==', cleanEmail), limit(1));
             const querySnap = await getDocs(q);
 
             if (!querySnap.empty) {
               const existingDoc = querySnap.docs[0];
+              console.log(`[Auth] Doc encontrado por e-mail (ID original: ${existingDoc.id}). Consolidando...`);
               const existingData = existingDoc.data();
 
-              // Consolidation: Create new doc with current UID using existing data
               await setDoc(userRef, {
                 ...existingData,
                 uid: u.uid,
@@ -737,18 +741,17 @@ export default function App() {
                 _consolidatedFrom: existingDoc.id
               });
 
-              // Optionally delete original doc if ID was different to keep unique
               if (existingDoc.id !== u.uid) {
                 await deleteDoc(existingDoc.ref);
               }
-
               userSnap = await getDoc(userRef);
             }
           }
 
           if (userSnap.exists()) {
+            console.log(`[Auth] Carregando perfil existente...`);
             const data = userSnap.data();
-            const isDefaultMaster = u.email === "diego.martins@cmc.pr.gov.br";
+            const isDefaultMaster = cleanEmail === "diego.martins@cmc.pr.gov.br";
             const finalRole = isDefaultMaster ? 'master' : (data.role || 'user');
             const finalStatus = isDefaultMaster ? 'approved' : (data.status || 'pending');
 
@@ -762,32 +765,35 @@ export default function App() {
 
             await updateDoc(userRef, {
               lastActive: serverTimestamp(),
-              displayName: u.displayName || data.displayName,
-              email: (u.email || '').toLowerCase().trim()
+              displayName: u.displayName || data.displayName || '',
+              email: cleanEmail
             });
           } else {
-            // Priority 3: Create totally new user
-            const isMasterEmail = u.email === "diego.martins@cmc.pr.gov.br";
+            console.log(`[Auth] Criando NOVO perfil para: ${cleanEmail}`);
+            const isMasterEmail = cleanEmail === "diego.martins@cmc.pr.gov.br";
             const role = isMasterEmail ? 'master' : 'user';
             const status = isMasterEmail ? 'approved' : 'pending';
 
-            await setDoc(userRef, {
+            const newUserData = {
               uid: u.uid,
-              email: (u.email || '').toLowerCase().trim(),
-              displayName: u.displayName,
+              email: cleanEmail,
+              displayName: u.displayName || '',
               role: role,
               status: status,
               hasAcceptedTerms: false,
               createdAt: serverTimestamp(),
               lastActive: serverTimestamp()
-            });
+            };
+
+            await setDoc(userRef, newUserData);
+            console.log(`[Auth] Novo perfil criado com sucesso! Status: ${status}`);
 
             setUserRole(role);
             setUserStatus(status);
             setHasAcceptedTerms(false);
           }
         } catch (err: any) {
-          console.error("Error initializing user data:", err);
+          console.error("[Auth Error] Erro crítico na inicialização:", err);
           const detail = err.message || JSON.stringify(err);
           setApiError(`Erro ao inicializar dados do usuário: ${detail.substring(0, 100)}...`);
         }
@@ -935,10 +941,14 @@ export default function App() {
   const handleLogout = async () => {
     if (user) {
       try {
-        // Set lastActive to null or old date on logout to immediately show as offline
-        await updateDoc(doc(db, 'users', user.uid), {
-          lastActive: null
-        });
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          // Set lastActive to null on logout to show as offline
+          await updateDoc(userRef, {
+            lastActive: null
+          });
+        }
       } catch (e) {
         console.error("Error clearing presence on logout", e);
       }

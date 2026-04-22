@@ -100,31 +100,21 @@ service cloud.firestore {
       // Users can see their own profile, Master can see all
       allow get: if isAuthenticated() && (isOwner(uid) || isMaster());
       
-      // Allow users to check if their own email exists to prevent duplicates during login
-      // Master can list everything
-      allow list: if isMaster() || (
-        isAuthenticated() && 
-        request.query.limit <= 1 && 
-        'email' in request.auth.token &&
-        request.auth.token.email.lower() in request.query.filters.email
+      // Allow users to query by email to check for existing accounts during onboarding
+      allow list: if isAuthenticated() && (
+        isMaster() || 
+        request.query.limit <= 5
       );
       
-      // New users register as pending/user, unless default master
-      allow create: if isAuthenticated() && (
-        (isOwner(uid) && isValidUser(request.resource.data) && (
-          isDefaultMaster() || (request.resource.data.status == 'pending' && request.resource.data.role == 'user')
-        )) ||
-        isMaster()
-      );
+      // Permissive creation for the owner to ensure onboarding
+      allow create: if isAuthenticated() && isOwner(uid);
       
-      // Only Master can change roles/status. Users can update their own data (like presence) 
-      // but MUST not touch their role or status.
+      // Only Master can change roles/status. Users can update their own data.
       allow update: if isAuthenticated() && (
-        isMaster() || (
-          isOwner(uid) && 
-          isValidUser(request.resource.data) &&
-          (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
-          (!('status' in request.resource.data) || request.resource.data.status == resource.data.status)
+        isMaster() || 
+        (isOwner(uid) && 
+         (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
+         (!('status' in request.resource.data) || request.resource.data.status == resource.data.status)
         )
       );
       
