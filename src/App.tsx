@@ -6,7 +6,7 @@ import {
   Layout, BarChart, ShieldCheck, Leaf, Settings, Zap, Wand2, Eye, Edit3, 
   AlertTriangle, ChevronDown, ChevronUp, Download, Info, Trash2, PlusCircle,
   ImagePlus, X, ChevronLeft, ChevronRight, ArrowLeft, Lightbulb, Settings2,
-  RefreshCcw
+  RefreshCcw, LogOut, FileDown, Users
 } from "lucide-react";
 import { ETPData, ETPField, ETPStructureItem, ETPExample } from "./types";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType, ImageRun } from "docx";
@@ -400,7 +400,7 @@ const IconMap: Record<string, any> = {
   FileText, ClipboardList, Target, CheckCircle, Sparkles, Loader2, Printer, 
   Layout, BarChart, ShieldCheck, Leaf, Settings, Zap, Wand2, Eye, Edit3, 
   AlertTriangle, ChevronDown, ChevronUp, Download, Info, Trash2, PlusCircle,
-  ImagePlus, X
+  ImagePlus, X, LogOut, FileDown, Users, RefreshCcw
 };
 
 const Icon = ({ name, size = 16, className = "" }: { name: string, size?: number, className?: string }) => {
@@ -1653,6 +1653,17 @@ export default function App() {
 
       const doc = new Document({
         styles: {
+          default: {
+            document: {
+              run: {
+                font: "Arial",
+                size: 21,
+              },
+              paragraph: {
+                spacing: { line: 360 },
+              },
+            },
+          },
           paragraphStyles: [
             {
               id: "Normal",
