@@ -797,19 +797,6 @@ export default function App() {
             await setDoc(userRef, newUserData);
             console.log(`[Auth] Novo perfil criado com sucesso! Status: ${status}`);
 
-            // Notificar administrador sobre novo pedido de acesso
-            if (!isMasterEmail) {
-              fetch('/api/notify-admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  email: cleanEmail,
-                  displayName: u.displayName || '',
-                  uid: u.uid
-                })
-              }).catch(err => console.warn("[Auth] Servidor de notificação indisponível (comum em GitHub Pages):", err));
-            }
-
             setUserRole(role);
             setUserStatus(status);
             setHasAcceptedTerms(false);

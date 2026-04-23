@@ -2,58 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    match /test/connection {
-      allow read: if true;
-    }
-    
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {uid}
-    // Fields:
-    //   - uid: string (required)
-    //   - email: string (required)
-    //   - displayName: string
-    //   - role: string (user, master) - required
-    //   - createdAt: timestamp
-    //
-    // Collection: etps
-    // Document ID: {etpId}
-    // Fields:
-    //   - id: string
-    //   - userId: string (required)
-    //   - userEmail: string
-    //   - title: string
-    //   - status: string (draft, completed, deleted, active)
-    //   - data: map (ETPData)
-    //   - createdAt: timestamp
-    //   - updatedAt: timestamp
-    //   - deletedAt: timestamp (optional)
-    //
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
 
-    // Default master has absolute authority
     function isDefaultMaster() {
       return isAuthenticated() && 
              'email' in request.auth.token && 
              request.auth.token.email.lower() == "diego.martins@cmc.pr.gov.br";
     }
-    
-    // Check if current user is master
+
     function isMaster() {
       return isAuthenticated() && (
         isDefaultMaster() || 
@@ -61,8 +19,7 @@ service cloud.firestore {
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master')
       );
     }
-    
-    // Check if current user is approved
+
     function isApproved() {
       return isAuthenticated() && (
         isDefaultMaster() || 
@@ -71,45 +28,11 @@ service cloud.firestore {
       );
     }
 
-    // Comprehensive validation for User document
-    function isValidUser(data) {
-      return data.uid is string && 
-             data.email is string &&
-             data.role is string &&
-             data.status is string;
-    }
-
-    // Validation for ETP documents
-    function isValidETP(data) {
-      return data.userId is string && 
-             data.status is string &&
-             data.data is map;
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
-
     match /users/{uid} {
-      // Users can see their own profile, Master can see all
       allow get: if isAuthenticated() && (request.auth.uid == uid || isMaster());
-      
-      // Allow users to query by email to check for existing accounts during onboarding
       allow list: if isAuthenticated();
-      
-      // Permissive creation for the owner to ensure onboarding
       allow create: if isAuthenticated() && request.auth.uid == uid;
-      
-      // Only Master can change roles/status. Users can update their own data.
-      allow update: if isAuthenticated() && (
-        isMaster() || 
-        (request.auth.uid == uid && 
-         (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
-         (!('status' in request.resource.data) || request.resource.data.status == resource.data.status)
-        )
-      );
-      
-      // Allow delete if I am master OR if the document has MY email (consolidation)
+      allow update: if isAuthenticated() && (request.auth.uid == uid || isMaster());
       allow delete: if isAuthenticated() && (
         isMaster() || 
         (resource.data.email.lower() == request.auth.token.email.lower())
@@ -117,21 +40,14 @@ service cloud.firestore {
     }
 
     match /etps/{etpId} {
-      // Only owner or Master can read
-      // Using resource.data in list rule ensures users can ONLY list their own etps
       allow get, list: if isAuthenticated() && (isMaster() || resource.data.userId == request.auth.uid);
-      
-      // Only approved users can maintain ETPs
-      allow create: if (isApproved() || isMaster()) && 
-                    (request.resource.data.userId == request.auth.uid || isMaster()) &&
-                    isValidETP(request.resource.data);
-                    
-      allow update: if (isApproved() || isMaster()) && 
-                    (resource.data.userId == request.auth.uid || isMaster()) &&
-                    isValidETP(request.resource.data) &&
-                    (request.resource.data.userId == resource.data.userId || isMaster()); // Master can reassign
-                    
-      allow delete: if (isApproved() || isMaster()) && (resource.data.userId == request.auth.uid || isMaster());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
+    }
+
+    match /test/connection {
+      allow read: if true;
     }
   }
 }
