@@ -1967,7 +1967,7 @@ export default function App() {
       const blob = await Packer.toBlob(doc);
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_');
-      const filename = `${(formData.etp_name || 'VIABILIZA').replace(/[/\\?%*:|"<>]/g, '_')}_-_${dateStr}.docx`;
+      const filename = `${(formData.etp_name || 'ETP_Digital').replace(/[/\\?%*:|"<>]/g, '_')}_-_${dateStr}.docx`;
       saveAs(blob, filename);
     } catch (err: any) {
       console.error("Erro ao exportar DOCX:", err);
@@ -1979,7 +1979,7 @@ export default function App() {
     if (!formData) return;
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0].replace(/-/g, '_');
-    const filename = `${(formData.etp_name || 'VIABILIZA').replace(/[/\\?%*:|"<>]/g, '_')}_-_${dateStr}`;
+    const filename = `${(formData.etp_name || 'ETP_Digital').replace(/[/\\?%*:|"<>]/g, '_')}_-_${dateStr}`;
     
     const printWindow = window.open('', '_blank');
     if (printWindow) {
