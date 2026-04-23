@@ -49,31 +49,25 @@ service cloud.firestore {
     // Default master has absolute authority
     function isDefaultMaster() {
       return isAuthenticated() && 
+             'email' in request.auth.token && 
              request.auth.token.email.lower() == "diego.martins@cmc.pr.gov.br";
     }
     
-    // Retrieve user document data
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
     // Check if current user is master
     function isMaster() {
       return isAuthenticated() && (
-        isDefaultMaster() || (
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master'
-        )
+        isDefaultMaster() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master')
       );
     }
     
     // Check if current user is approved
     function isApproved() {
       return isAuthenticated() && (
-        isDefaultMaster() || (
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
-        )
+        isDefaultMaster() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved')
       );
     }
 
@@ -98,28 +92,28 @@ service cloud.firestore {
 
     match /users/{uid} {
       // Users can see their own profile, Master can see all
-      allow get: if isAuthenticated() && (isOwner(uid) || isMaster());
+      allow get: if isAuthenticated() && (request.auth.uid == uid || isMaster());
       
       // Allow users to query by email to check for existing accounts during onboarding
-      allow list: if isAuthenticated() && (
-        isMaster() || 
-        request.query.limit <= 5
-      );
+      allow list: if isAuthenticated();
       
       // Permissive creation for the owner to ensure onboarding
-      allow create: if isAuthenticated() && isOwner(uid);
+      allow create: if isAuthenticated() && request.auth.uid == uid;
       
       // Only Master can change roles/status. Users can update their own data.
       allow update: if isAuthenticated() && (
         isMaster() || 
-        (isOwner(uid) && 
+        (request.auth.uid == uid && 
          (!('role' in request.resource.data) || request.resource.data.role == resource.data.role) &&
          (!('status' in request.resource.data) || request.resource.data.status == resource.data.status)
         )
       );
       
-      // Strict lockdown on deletions
-      allow delete: if isMaster();
+      // Allow delete if I am master OR if the document has MY email (consolidation)
+      allow delete: if isAuthenticated() && (
+        isMaster() || 
+        (resource.data.email.lower() == request.auth.token.email.lower())
+      );
     }
 
     match /etps/{etpId} {
