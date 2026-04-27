@@ -594,6 +594,7 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [examplePopup, setExamplePopup] = useState<{ fieldId: string, examples: ETPExample[] } | null>(null);
   const [helpPopup, setHelpPopup] = useState<{ title: string, content: string } | null>(null);
+  const [aiPopup, setAiPopup] = useState<{ fieldId: ETPField, content: string } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'diagnostic' | 'technical'>('diagnostic');
   const [expandedSections, setExpandedSections] = useState<string[]>(['0. DIAGNÓSTICO INICIAL', 'I - INFORMAÇÕES GERAIS', 'II - DEMANDA E PROSPECÇÃO DE SOLUÇÕES', 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 'IV - ANÁLISE DE RISCOS E CONCLUSÃO']);
@@ -1537,12 +1538,19 @@ export default function App() {
 
       const result = response.text;
       if (result) {
-        setFormData(prev => ({ ...prev, [fieldId]: result.trim() }));
+        setAiPopup({ fieldId, content: result.trim() });
       }
     } catch (err: any) {
       setApiError(err.message || "Erro ao gerar conteúdo");
     } finally {
       setIsGenerating(null);
+    }
+  };
+
+  const acceptAiSuggestion = () => {
+    if (aiPopup) {
+      setFormData(prev => ({ ...prev, [aiPopup.fieldId]: aiPopup.content }));
+      setAiPopup(null);
     }
   };
 
@@ -2513,6 +2521,78 @@ export default function App() {
                 initial={{ width: 0 }}
                 animate={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
               />
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {aiPopup && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 no-print">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="bg-white rounded-[32px] p-8 max-w-3xl w-full shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between mb-6 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                  <Icon name="Sparkles" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 leading-tight">Sugestão da IA</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Analise a proposta antes de aplicar ao seu ETP</p>
+                </div>
+              </div>
+              <button onClick={() => setAiPopup(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <Icon name="X" size={20} className="text-slate-400" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50 rounded-2xl border border-slate-100 p-6">
+              <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Icon name="FileText" size={12} />
+                {structure.find(s => s.id === aiPopup.fieldId)?.label}
+              </h4>
+              <div className="prose prose-slate prose-sm max-w-none">
+                {['tabela_estimativa_quantitativos_precos', 'tabela_riscos_interna', 'tabela_riscos_externa'].includes(aiPopup.fieldId) ? (
+                  <div 
+                    className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm overflow-x-auto tiptap-content"
+                    dangerouslySetInnerHTML={{ __html: aiPopup.content }}
+                  />
+                ) : (
+                  <div className="text-slate-700 leading-relaxed text-sm whitespace-pre-wrap bg-white p-6 rounded-xl border border-slate-200 shadow-sm font-medium">
+                    {aiPopup.content}
+                  </div>
+                )}
+              </div>
+              
+              {aiPopup.content.startsWith("NECESSITA COMPLEMENTAÇÃO") && (
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3">
+                  <Icon name="AlertTriangle" size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-800 font-bold leading-tight">
+                    A IA identificou que faltam informações no diagnóstico para gerar um texto completo. 
+                    Revise os colchetes [ ] se decidir aplicar.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mt-8 shrink-0">
+              <button 
+                onClick={() => setAiPopup(null)}
+                className="px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+              >
+                <Icon name="X" size={14} />
+                Descartar
+              </button>
+              <button 
+                onClick={acceptAiSuggestion}
+                className="px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+              >
+                <Icon name="CheckCircle" size={14} />
+                Aplicar Sugestão
+              </button>
             </div>
           </motion.div>
         </div>
