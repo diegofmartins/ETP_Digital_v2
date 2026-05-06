@@ -29,6 +29,14 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "data", "status"]
+    },
+    "SystemConfig": {
+      "title": "System Config",
+      "description": "Global system configuration",
+      "type": "object",
+      "properties": {
+        "chatWebhookUrl": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -39,6 +47,10 @@
     "/etps/{etpId}": {
       "schema": "ETPDraft",
       "description": "ETP drafts and documents"
+    },
+    "/config/system": {
+      "schema": "SystemConfig",
+      "description": "Global system settings"
     }
   }
 }

@@ -46,6 +46,11 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
     }
 
+    match /config/system {
+      allow read: if isAuthenticated();
+      allow write: if isMaster();
+    }
+
     match /test/connection {
       allow read: if true;
     }

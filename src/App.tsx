@@ -580,7 +580,8 @@ export default function App() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const lastSavedDataRef = useRef<string>('');
   const [view, setView] = useState<'dashboard' | 'editor' | 'admin'>('dashboard');
-  const [adminTab, setAdminTab] = useState<'etps' | 'users' | 'trash'>('users');
+  const [adminTab, setAdminTab] = useState<'etps' | 'users' | 'trash' | 'settings'>('users');
+  const [systemSettings, setSystemSettings] = useState<{ chatWebhookUrl?: string }>({});
   
   const [formData, setFormData] = useState<ETPData>(INITIAL_STATE);
   const [isGenerating, setIsGenerating] = useState<ETPField | 'global' | null>(null);
@@ -839,7 +840,7 @@ export default function App() {
               .then(() => {
                 console.log(`[Auth] Novo perfil criado com sucesso! Status: ${status}`);
                 if (status === 'pending') {
-                  notifyNewUserRegistration(cleanEmail, u.displayName || 'Usuário').catch(e => console.warn("Erro ao enviar notificação de registro:", e.message));
+                  notify.registration(cleanEmail, u.displayName || 'Usuário').catch(e => console.warn("Erro ao enviar notificação de registro:", e.message));
                 }
               })
               .catch(e => console.warn("Erro ao criar perfil. O usuário continua logado na sessão local.", e.message));
@@ -979,6 +980,35 @@ export default function App() {
 
   const pendingUsersCount = sortedUsers.filter(u => u.status === 'pending').length;
 
+  // System Settings Listener
+  useEffect(() => {
+    if (isMaster && userStatus === 'approved' && isAuthReady) {
+      const unsubscribe = onSnapshot(doc(db, 'config', 'system'), (docSnap) => {
+        if (docSnap.exists()) {
+          setSystemSettings(docSnap.data());
+        }
+      });
+      return unsubscribe;
+    }
+  }, [isMaster, userStatus, isAuthReady]);
+
+  const updateSystemSettings = async (newSettings: any) => {
+    try {
+      await setDoc(doc(db, 'config', 'system'), newSettings, { merge: true });
+      setApiError("Configurações atualizadas com sucesso!");
+      setTimeout(() => setApiError(null), 3000);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, 'config/system');
+    }
+  };
+
+  const notify = {
+    registration: (email: string, name: string) => notifyNewUserRegistration(email, name, systemSettings.chatWebhookUrl),
+    approved: (email: string, name: string) => notifyUserApproved(email, name, systemSettings.chatWebhookUrl),
+    created: (email: string, title: string) => notifyNewETPCreated(email, title, systemSettings.chatWebhookUrl),
+    test: () => sendGoogleChatNotification("🔔 *Teste de Notificação*\n\nO sistema de notificações do ETP Digital está operando corretamente!", systemSettings.chatWebhookUrl)
+  };
+
   const handleLogin = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -1040,7 +1070,7 @@ export default function App() {
         setCurrentDraftId(docRef.id);
         
         // Notify about new ETP
-        notifyNewETPCreated(user.email || 'Usuário', draftData.title).catch(e => console.warn("Erro ao enviar notificação de novo ETP:", e.message));
+        notify.created(user.email || 'Usuário', draftData.title).catch(e => console.warn("Erro ao enviar notificação de novo ETP:", e.message));
       }
       
       lastSavedDataRef.current = currentDataStr;
@@ -3001,7 +3031,7 @@ export default function App() {
           </button>
           <button 
             onClick={() => {
-              sendGoogleChatNotification("🔔 *Teste de Notificação*\n\nO sistema de notificações do ETP Digital está operando corretamente!").then(() => {
+              notify.test().then(() => {
                 setApiError("Notificação de teste enviada para o Google Chat!");
                 setTimeout(() => setApiError(null), 3000);
               }).catch(e => setApiError("Erro ao enviar teste: " + e.message));
@@ -3077,7 +3107,61 @@ export default function App() {
           >
             Lixeira
           </button>
+          <button 
+            onClick={() => setAdminTab('settings')}
+            className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${adminTab === 'settings' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Configurações
+          </button>
         </div>
+
+        {adminTab === 'settings' && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm max-w-2xl mx-auto"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                <Icon name="Settings2" size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900">Configurações do Sistema</h3>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Integrações e Notificações</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+                  Google Chat Webhook URL
+                </label>
+                <div className="relative">
+                  <input 
+                    type="password"
+                    value={systemSettings.chatWebhookUrl || ''}
+                    onChange={(e) => setSystemSettings(prev => ({ ...prev, chatWebhookUrl: e.target.value }))}
+                    placeholder="https://chat.googleapis.com/v1/spaces/..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                    <Icon name="Zap" size={18} />
+                  </div>
+                </div>
+                <p className="mt-2 text-[10px] text-slate-400 font-medium ml-1">
+                  Esta URL será usada para enviar notificações de novos registros e ETPs criados.
+                </p>
+              </div>
+
+              <button 
+                onClick={() => updateSystemSettings(systemSettings)}
+                className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+              >
+                <Icon name="CheckCircle" size={18} /> Salvar Configurações
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {adminTab === 'users' && (
           <div className="relative w-full sm:w-64">
@@ -3263,7 +3347,7 @@ export default function App() {
                         <button 
                           onClick={() => {
                             updateUserStatus(u.id, 'approved');
-                            notifyUserApproved(u.email, u.displayName || 'Usuário').catch(e => console.warn("Erro ao enviar notificação de aprovação:", e.message));
+                            notify.approved(u.email, u.displayName || 'Usuário').catch(e => console.warn("Erro ao enviar notificação de aprovação:", e.message));
                           }}
                           className="px-2 sm:px-3 py-1.5 bg-green-600 text-white rounded-lg text-[9px] sm:text-[10px] font-bold hover:bg-green-700 transition-all"
                         >
