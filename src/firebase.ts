@@ -94,6 +94,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  
+  if (message.includes('resource-exhausted') || message.includes('Quota limit exceeded')) {
+    const event = new CustomEvent('firestore-quota-exceeded', { detail: message });
+    if (typeof window !== 'undefined') window.dispatchEvent(event);
+  }
   // Not throwing error to avoid infinite loops in React error boundaries/listeners
   // throw new Error(JSON.stringify(errInfo));
 }

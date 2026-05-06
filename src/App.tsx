@@ -584,6 +584,17 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState<ETPField | 'global' | null>(null);
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [apiError, setApiError] = useState<string | null>(null);
+  const [quotaExceeded, setQuotaExceeded] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleQuotaError = (e: any) => {
+      console.error("Quota Exceeded Event Caught:", e.detail);
+      setQuotaExceeded(true);
+    };
+    window.addEventListener('firestore-quota-exceeded', handleQuotaError);
+    return () => window.removeEventListener('firestore-quota-exceeded', handleQuotaError);
+  }, []);
+
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showGlobalConfirm, setShowGlobalConfirm] = useState(false);
@@ -2412,6 +2423,36 @@ export default function App() {
                 className="flex-1 px-6 py-3 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
               >
                 Sim, Limpar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Quota Exceeded Modal */}
+      {quotaExceeded && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[40px] p-8 max-w-md w-full shadow-2xl border border-red-200"
+          >
+            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 mb-6 mx-auto">
+              <Icon name="Database" size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2 text-center">Limite do Banco Atingido</h3>
+            <p className="text-slate-500 text-sm leading-relaxed mb-6 text-center">
+              O limite gratuito diário de uso do banco de dados (Firebase Firestore) foi esgotado. Isso ocorre porque o sistema realiza auto-salvamentos constantes.
+            </p>
+            <p className="text-slate-500 text-sm leading-relaxed mb-8 text-center">
+              Você pode voltar a utilizá-lo amanhã (após a redefinição do limite) ou então será necessário habilitar o faturamento no console do Firebase (Plano Blaze).
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setQuotaExceeded(false)}
+                className="w-full px-6 py-3 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-lg"
+              >
+                Entendi
               </button>
             </div>
           </motion.div>
