@@ -754,22 +754,44 @@ export default function App() {
           if (isDefaultMaster) {
             setUserRole('master');
             setUserStatus('approved');
-            console.log("[Auth] Master verificado antes da consulta ao BD.");
+            console.log("[Auth] Master verificado por e-mail (Bypass offline).");
           }
 
           // Priority 1: Check if document exists with current UID
           const userRef = doc(db, 'users', u.uid);
           console.log(`[Auth] Verificando existência do doc para UID: ${u.uid}`);
-          let userSnap = await getDoc(userRef);
+          
+          let userSnap;
+          try {
+            // Promise with timeout for better UX
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("unreachable")), 8000));
+            userSnap = await Promise.race([getDoc(userRef), timeoutPromise]) as any;
+          } catch (fetchErr: any) {
+            console.warn("[Auth] Erro ao buscar perfil (talvez offline):", fetchErr.message);
+            // If we are offline but have a master email, we allow it. Otherwise, we might need to wait or show a message.
+            if (isDefaultMaster) {
+              userSnap = { exists: () => false }; // Fallback to new user logic which sets master/approved anyway
+            } else {
+              throw fetchErr; // Re-throw to be caught by the outer block if we really can't proceed
+            }
+          }
 
           // Priority 2: If not found by UID, check if document exists with same email
           if (!userSnap.exists()) {
             console.log(`[Auth] Doc não encontrado por UID. Buscando por e-mail: ${cleanEmail}`);
             const usersRef = collection(db, 'users');
             const q = query(usersRef, where('email', '==', cleanEmail), limit(1));
-            const querySnap = await getDocs(q);
+            
+            let querySnap;
+            try {
+              const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("unreachable")), 8000));
+              querySnap = await Promise.race([getDocs(q), timeoutPromise]) as any;
+            } catch (qErr) {
+              console.warn("[Auth] Error na busca por e-mail (offline?):", qErr);
+              querySnap = { empty: true };
+            }
 
-            if (!querySnap.empty) {
+            if (querySnap && !querySnap.empty) {
               const existingDoc = querySnap.docs[0];
               console.log(`[Auth] Doc encontrado por e-mail (ID original: ${existingDoc.id}). Consolidando...`);
               const existingData = existingDoc.data();
@@ -796,7 +818,6 @@ export default function App() {
           if (userSnap.exists()) {
             console.log(`[Auth] Carregando perfil existente...`);
             const data = userSnap.data();
-            const isDefaultMaster = cleanEmail === "diego.martins@cmc.pr.gov.br";
             const finalRole = isDefaultMaster ? 'master' : (data.role || 'user');
             const finalStatus = isDefaultMaster ? 'approved' : (data.status || 'pending');
 
@@ -813,12 +834,11 @@ export default function App() {
               lastActive: serverTimestamp(),
               displayName: u.displayName || data.displayName || '',
               email: cleanEmail
-            }).catch(e => console.warn("Erro ao atualizar presença na inicialização:", e.message));
+            }).catch(e => console.warn("Erro ao atualizar presença na inicialização (provavelmente offline):", e.message));
           } else {
             console.log(`[Auth] Criando NOVO perfil para: ${cleanEmail}`);
-            const isMasterEmail = cleanEmail === "diego.martins@cmc.pr.gov.br";
-            const role = isMasterEmail ? 'master' : 'user';
-            const status = isMasterEmail ? 'approved' : 'pending';
+            const role = isDefaultMaster ? 'master' : 'user';
+            const status = isDefaultMaster ? 'approved' : 'pending';
 
             const newUserData = {
               uid: u.uid,
@@ -846,9 +866,15 @@ export default function App() {
               .catch(e => console.warn("Erro ao criar perfil. O usuário continua logado na sessão local.", e.message));
           }
         } catch (err: any) {
-          console.error("[Auth Error] Erro crítico na inicialização:", err);
-          const detail = err.message || JSON.stringify(err);
-          setApiError(`Erro ao inicializar dados do usuário: ${detail.substring(0, 100)}...`);
+          if (err.message === "unreachable" || err.message?.includes("client is offline")) {
+            console.warn("[Auth] Operando em modo de conectividade limitada.");
+            // If it's a known email, we've already set the basics.
+            // If not, we let the user stay in "pending" status locally.
+          } else {
+            console.error("[Auth Error] Erro crítico na inicialização:", err);
+            const detail = err.message || JSON.stringify(err);
+            setApiError(`Erro ao inicializar dados do usuário: ${detail.substring(0, 100)}...`);
+          }
         }
       } else {
         setUser(null);

@@ -14,24 +14,24 @@ export async function sendGoogleChatNotification(message: string, overrideUrl?: 
   }
 
   try {
-    // Note: Calling Google Chat webhooks directly from the browser (e.g. GitHub Pages)
-    // usually hits CORS restrictions. 'no-cors' allows the request to be sent,
-    // although we won't be able to read the response.
+    // Tentativa 1: Requisição padrão (pode falhar por CORS em sites estáticos)
+    // Tentativa 2: Usando 'no-cors' para pelo menos enviar a requisição (fogo e esquece)
+    // Nota: 'no-cors' não permite ler a resposta e limita o Content-Type a text/plain
+    
     await fetch(url, {
       method: 'POST',
-      mode: 'no-cors',
+      mode: 'no-cors', 
       headers: {
-        'Content-Type': 'application/json; charset=UTF-8',
+        'Content-Type': 'text/plain', // Usando text/plain para evitar Preflight OPTIONS (CORS)
       },
       body: JSON.stringify({
         text: message
       }),
     });
     
-    // With no-cors, we don't get response details, so we assume it was sent
-    console.log("Notification request sent to Google Chat.");
+    console.log("Chamada de notificação enviada (modo no-cors).");
   } catch (error) {
-    console.error("Error sending notification to Google Chat:", error);
+    console.error("Erro crítico ao enviar notificação:", error);
   }
 }
 

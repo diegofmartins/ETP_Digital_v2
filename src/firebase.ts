@@ -10,9 +10,10 @@ export const auth = getAuth(app);
 // Initialize Firestore only if not already initialized
 let firestoreInstance: Firestore;
 try {
-  // Try to initialize with specific settings
+  // Try to initialize with specific settings to bypass connection issues (especially on restrictive networks/GitHub Pages)
   firestoreInstance = initializeFirestore(app, {
     experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: false, // Force it, don't just detect
   }, firebaseConfig.firestoreDatabaseId);
 } catch (e: any) {
   // If already initialized (e.g. during HMR or multiple imports), just get the existing instance
@@ -31,14 +32,19 @@ if (typeof window !== 'undefined') {
   };
 }
 
-// Test connection
+// Test connection silently - don't let it throw if offline
 async function testConnection() {
   try {
     if (firebaseConfig.firestoreDatabaseId) {
-      await getDocFromServer(doc(db, 'test', 'connection'));
+      // Use getDocFromServer to verify connectivity
+      await getDocFromServer(doc(db, 'test', 'connection')).catch(err => {
+        if (err.code === 'unavailable') {
+          console.warn("[Firestore] Connectivity warning: Backend unavailable. Operating in offline mode.");
+        }
+      });
     }
   } catch (error: any) {
-    console.log("Connectivity check:", error.code || error.message);
+    // Ignore early failures during initial mount
   }
 }
 testConnection();
