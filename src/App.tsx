@@ -577,6 +577,8 @@ export default function App() {
   const [drafts, setDrafts] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [trashDrafts, setTrashDrafts] = useState<any[]>([]);
+  const [backupsList, setBackupsList] = useState<any[]>([]);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const lastSavedDataRef = useRef<string>('');
   const [view, setView] = useState<'dashboard' | 'editor' | 'admin'>('dashboard');
@@ -921,12 +923,6 @@ export default function App() {
       }
     }, (err) => {
       console.warn("User profile sync error:", err);
-      // Fallback: If we can't read the user profile, assume pending unless default master
-      const cleanEmail = (user.email || '').toLowerCase().trim();
-      if (cleanEmail === "diego.martins@cmc.pr.gov.br") {
-        setUserRole('master');
-        setUserStatus('approved');
-      }
     });
 
     return unsubscribe;
@@ -1019,9 +1015,6 @@ export default function App() {
         if (docSnap.exists()) {
           setSystemSettings(docSnap.data());
         }
-      }, (err) => {
-        console.warn("System settings listener error:", err);
-        // Do not throw here to avoid crashing the app for pending users if permissions are tight
       });
       return unsubscribe;
     }
@@ -1036,6 +1029,61 @@ export default function App() {
       handleFirestoreError(err, OperationType.WRITE, 'config/system');
     }
   };
+
+  const fetchBackups = async () => {
+    setIsLoadingBackups(true);
+    try {
+      const response = await fetch('/api/backups');
+      if (response.ok) {
+        const data = await response.json();
+        setBackupsList(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar backups:", err);
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
+
+  const handleTriggerBackup = async () => {
+    setIsLoadingBackups(true);
+    try {
+      const response = await fetch('/api/backups/trigger', { method: 'POST' });
+      if (response.ok) {
+        setApiError("Backup iniciado com sucesso!");
+        setTimeout(() => setApiError(null), 3000);
+        setTimeout(fetchBackups, 2000); // Wait a bit for it to complete
+      }
+    } catch (err) {
+      console.error("Erro ao disparar backup:", err);
+    } finally {
+      setIsLoadingBackups(false);
+    }
+  };
+
+  const downloadBackup = (backup: any) => {
+    try {
+      const blob = new Blob([backup.data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = backup.filename || `backup_${backup.id}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Erro ao baixar backup:", err);
+      setApiError("Erro ao processar arquivo de backup.");
+      setTimeout(() => setApiError(null), 3000);
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'admin' && adminTab === 'settings' && isMaster) {
+      fetchBackups();
+    }
+  }, [view, adminTab, isMaster]);
 
   const notify = {
     registration: async (email: string, name: string) => {
@@ -1166,29 +1214,14 @@ export default function App() {
     }
   };
 
-  // Auto-save & Local Storage Backup
+  // Auto-save
   useEffect(() => {
-    if (!user || view !== 'editor' || !formData) return;
-    
-    // Immediate LocalStorage Backup for safety
-    try {
-      localStorage.setItem('viabiliza_last_edit', JSON.stringify({
-        id: currentDraftId,
-        uid: user.uid,
-        email: user.email,
-        data: formData,
-        timestamp: Date.now()
-      }));
-    } catch (e) {
-      // Might fail if quota exceeded (images in formData?)
-      console.warn("Local storage backup failed:", e);
-    }
-
+    if (!user || view !== 'editor') return;
     const timer = setTimeout(() => {
       saveDraft();
-    }, 30000); // Reduce to 30 seconds for better responsiveness
+    }, 180000); // 3 minutos
     return () => clearTimeout(timer);
-  }, [formData, user, view, currentDraftId]);
+  }, [formData, user, view]);
 
   const loadDraft = (draft: any, adminView = false) => {
     if (draft && draft.data) {
@@ -1794,24 +1827,10 @@ export default function App() {
 
       const resultText = response.text;
       if (resultText) {
-        let jsonContent = resultText;
-        // Se a IA retornar markdown, extraímos apenas o conteúdo do bloco JSON
-        if (resultText.includes("```json")) {
-          jsonContent = resultText.split("```json")[1].split("```")[0];
-        } else if (resultText.includes("```")) {
-          jsonContent = resultText.split("```")[1].split("```")[0];
-        }
-        
-        try {
-          const generatedData = JSON.parse(jsonContent.trim());
-          setFormData(prev => ({ ...prev, ...generatedData }));
-          setShowAdvanced(true);
-          setActiveTab('technical');
-        } catch (parseErr) {
-          console.error("JSON Parse Error:", parseErr, "Content:", jsonContent);
-          // Fallback: se falhar o parse do JSON completo, tenta encontrar padrões ou avisa o usuário
-          setApiError("A IA gerou um formato inválido. Tente novamente ou use a geração por campo individual.");
-        }
+        const generatedData = JSON.parse(resultText);
+        setFormData(prev => ({ ...prev, ...generatedData }));
+        setShowAdvanced(true);
+        setActiveTab('technical'); // Switch to technical fields after generation
       }
     } catch (err: any) {
       setApiError(err.message || "Erro na geração global. Tente preencher os campos básicos primeiro.");
@@ -3498,21 +3517,23 @@ export default function App() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm w-full overflow-hidden"
+        className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm max-w-2xl mx-auto w-full"
       >
-        <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Configurações Gerais do Sistema</h3>
-        </div>
-        <div className="p-6 sm:p-10 space-y-8 max-w-4xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+            <Icon name="Settings2" size={24} />
+          </div>
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Google Chat Webhook URL
-              </label>
-              <span className="text-[8px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
-                Notificações Ativas
-              </span>
-            </div>
+            <h3 className="text-xl font-black text-slate-900">Configurações do Sistema</h3>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Integrações e Notificações</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+              Google Chat Webhook URL
+            </label>
             <div className="relative">
               <input 
                 type="password"
@@ -3526,42 +3547,66 @@ export default function App() {
               </div>
             </div>
             <p className="mt-2 text-[10px] text-slate-400 font-medium ml-1">
-              Esta URL será usada para enviar notificações de novos registros e ETPs criados para o Master.
+              Esta URL será usada para enviar notificações de novos registros e ETPs criados.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button 
-              onClick={() => updateSystemSettings(systemSettings)}
-              className="bg-indigo-600 text-white py-4 px-6 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
-            >
-              <Icon name="CheckCircle" size={18} /> Salvar Alterações
-            </button>
-            <button 
-              onClick={() => {
-                const testMsg = "🔔 *Teste de Notificação*\n\nO sistema de notificações do ETP Digital (VIABILIZA) está configurado corretamente!";
-                if (systemSettings.chatWebhookUrl) {
-                  notify.test().then(() => setApiError("Notificação de teste enviada!")).catch(e => setApiError("Erro no teste: " + e.message));
-                } else {
-                  setApiError("Webhook URL não configurada.");
-                }
-              }}
-              className="bg-slate-100 text-slate-600 py-4 px-6 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
-            >
-              <Icon name="Zap" size={18} /> Testar Webhook
-            </button>
-          </div>
-          
+          <button 
+            onClick={() => updateSystemSettings(systemSettings)}
+            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+          >
+            <Icon name="CheckCircle" size={18} /> Salvar Configurações
+          </button>
+
           <div className="pt-8 border-t border-slate-100">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Integridade e Backups</h4>
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
-              <Icon name="AlertTriangle" size={18} className="text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-amber-900 mb-1">Backup Automático Ativo</p>
-                <p className="text-[10px] text-amber-700 leading-relaxed">
-                  O sistema realiza rascunhos automáticos a cada 30 segundos durante a edição e mantém uma cópia de segurança local no seu navegador.
-                </p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                  <Icon name="Database" size={18} />
+                </div>
+                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Backups Automáticos</h4>
               </div>
+              <button 
+                onClick={handleTriggerBackup}
+                disabled={isLoadingBackups}
+                className="text-[10px] font-black text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-full hover:bg-indigo-50 transition-all uppercase tracking-widest disabled:opacity-50"
+              >
+                {isLoadingBackups ? 'Processando...' : 'Backup Agora'}
+              </button>
+            </div>
+            
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon name="Clock" size={14} className="text-slate-400" />
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Últimos 7Backups (23:59:59)</p>
+              </div>
+
+              {backupsList.length === 0 ? (
+                <div className="text-center py-6 text-slate-400 text-xs italic">Nenhum backup disponível ainda.</div>
+              ) : (
+                <div className="space-y-2">
+                  {backupsList.map((backup) => (
+                    <div key={backup.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center">
+                          <Icon name="FileJson" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">{backup.filename}</p>
+                          <p className="text-[9px] text-slate-400 font-medium">{new Date(backup.createdAt).toLocaleString('pt-BR')}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => downloadBackup(backup)}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        title="Download backup"
+                      >
+                        <Icon name="Download" size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

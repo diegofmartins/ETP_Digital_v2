@@ -51,6 +51,10 @@
     "/config/system": {
       "schema": "SystemConfig",
       "description": "Global system settings"
+    },
+    "/backups/{backupId}": {
+      "schema": "object",
+      "description": "System backups"
     }
   }
 }

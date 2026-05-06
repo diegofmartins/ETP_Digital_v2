@@ -10,8 +10,13 @@ export const auth = getAuth(app);
 // Initialize Firestore only if not already initialized
 let firestoreInstance: Firestore;
 try {
-  firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  // Try to initialize with specific settings to bypass connection issues (especially on restrictive networks/GitHub Pages)
+  firestoreInstance = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: false, // Force it, don't just detect
+  }, firebaseConfig.firestoreDatabaseId);
 } catch (e: any) {
+  // If already initialized (e.g. during HMR or multiple imports), just get the existing instance
   firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 }
 
@@ -101,9 +106,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     if (typeof window !== 'undefined') window.dispatchEvent(event);
   }
   // Not throwing error to avoid infinite loops in React error boundaries/listeners
-  // Instead, we log clearly. If the platform needs to catch it, it can watch the console logs.
-  // We only throw if it's not a permission error or if it's explicitly needed for build checks.
-  if (!message.includes('permission-denied')) {
-    // Optional: throw new Error(JSON.stringify(errInfo));
-  }
+  // throw new Error(JSON.stringify(errInfo));
 }

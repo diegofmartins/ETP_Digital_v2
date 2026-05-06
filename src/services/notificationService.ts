@@ -14,22 +14,22 @@ export async function sendGoogleChatNotification(message: string, overrideUrl?: 
   }
 
   try {
-    const response = await fetch("/api/notify", {
-      method: "POST",
+    // Tentativa 1: Requisição padrão (pode falhar por CORS em sites estáticos)
+    // Tentativa 2: Usando 'no-cors' para pelo menos enviar a requisição (fogo e esquece)
+    // Nota: 'no-cors' não permite ler a resposta e limita o Content-Type a text/plain
+    
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors', 
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'text/plain', // Usando text/plain para evitar Preflight OPTIONS (CORS)
       },
       body: JSON.stringify({
-        url,
-        message
+        text: message
       }),
     });
     
-    if (response.ok) {
-      console.log("Notificação enviada via proxy.");
-    } else {
-      console.error("Falha ao enviar via proxy:", await response.text());
-    }
+    console.log("Chamada de notificação enviada (modo no-cors).");
   } catch (error) {
     console.error("Erro crítico ao enviar notificação:", error);
   }

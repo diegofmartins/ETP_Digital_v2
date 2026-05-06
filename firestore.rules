@@ -1,115 +1,60 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // -------------------------------------------------------------------------
-    // HELPERS GLOBAIS
-    // -------------------------------------------------------------------------
-    function isSignedIn() { return request.auth != null; }
-    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
+    function isAuthenticated() {
+      return request.auth != null;
+    }
 
     function isDefaultMaster() {
-      return isSignedIn() && 
+      return isAuthenticated() && 
              'email' in request.auth.token && 
              request.auth.token.email.lower() == "diego.martins@cmc.pr.gov.br";
     }
 
     function isMaster() {
-      return isSignedIn() && (
-        isDefaultMaster() ||
+      return isAuthenticated() && (
+        isDefaultMaster() || 
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "master")
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master')
       );
-    }
-    
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isApproved() {
-      return isMaster() || (
-        isVerified() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == "approved"
+      return isAuthenticated() && (
+        isDefaultMaster() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved')
       );
     }
 
-    // -------------------------------------------------------------------------
-    // CATCH-ALL SAFETY (DENY BY DEFAULT)
-    // -------------------------------------------------------------------------
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // -------------------------------------------------------------------------
-    // COLEÇÃO: USERS
-    // -------------------------------------------------------------------------
     match /users/{uid} {
-      function isValidUser(data) {
-        return data.keys().hasAll(['uid', 'email', 'status', 'role']) &&
-               data.uid is string && data.uid.size() <= 128 &&
-               data.email is string && data.email.size() <= 200 &&
-               data.status in ['pending', 'approved', 'disabled'] &&
-               data.role in ['user', 'master'];
-      }
-
-      // Qualquer um logado pode ver o perfil de outros (necessário para admin list)
-      allow get, list: if isSignedIn();
-      
-      // Criação inicial (auto-registro)
-      allow create: if isSignedIn() && isOwner(uid) && 
-                      isValidUser(incoming()) && 
-                      incoming().status == "pending" && 
-                      incoming().role == "user";
-      
-      // Update: Usuário só altera lastActive, hasAcceptedTerms e displayName. Master altera tudo.
-      allow update: if isSignedIn() && (
-        (isOwner(uid) && incoming().diff(existing()).affectedKeys().hasOnly(['lastActive', 'hasAcceptedTerms', 'displayName'])) ||
-        (isMaster() && isValidUser(incoming()))
+      allow get: if isAuthenticated() && (request.auth.uid == uid || isMaster());
+      allow list: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == uid;
+      allow update: if isAuthenticated() && (request.auth.uid == uid || isMaster());
+      allow delete: if isAuthenticated() && (
+        isMaster() || 
+        (resource.data.email.lower() == request.auth.token.email.lower())
       );
-
-      allow delete: if isMaster();
     }
 
-    // -------------------------------------------------------------------------
-    // COLEÇÃO: ETPS (DRAFTS)
-    // -------------------------------------------------------------------------
     match /etps/{etpId} {
-      function isValidETP(data) {
-        // Schema relaxado para permitir campos dinâmicos, mas valida campos críticos
-        return data.userId is string && data.userId.size() <= 128 &&
-               (!('etp_name' in data) || (data.etp_name is string && data.etp_name.size() <= 500));
-      }
-
-      allow get: if isSignedIn() && (isOwner(existing().userId) || isMaster());
-      
-      // Listagem segura - força o filtro por userId
-      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isMaster());
-
-      allow create: if isApproved() && isValidETP(incoming()) && isOwner(incoming().userId);
-      
-      allow update: if isApproved() && (
-        (isOwner(existing().userId) && 
-         incoming().userId == existing().userId && 
-         isValidETP(incoming())) ||
-        (isMaster() && isValidETP(incoming()))
-      );
-
-      allow delete: if isApproved() && (isOwner(existing().userId) || isMaster());
+      allow get, list: if isAuthenticated() && (isMaster() || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isMaster());
     }
 
-    // -------------------------------------------------------------------------
-    // COLEÇÃO: CONFIG (SYSTEM)
-    // -------------------------------------------------------------------------
     match /config/system {
-      allow read: if isSignedIn(); // Allow all signed-in users to read config for notifications
+      allow read: if isAuthenticated();
       allow write: if isMaster();
     }
 
-    // Para teste de conexão inicial
+    match /backups/{backupId} {
+      allow read, write: if isMaster();
+    }
+
     match /test/connection {
       allow read: if true;
     }
