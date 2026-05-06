@@ -1008,7 +1008,7 @@ export default function App() {
 
   // System Settings Listener
   useEffect(() => {
-    if (isMaster && userStatus === 'approved' && isAuthReady) {
+    if (user && isAuthReady) {
       const unsubscribe = onSnapshot(doc(db, 'config', 'system'), (docSnap) => {
         if (docSnap.exists()) {
           setSystemSettings(docSnap.data());
@@ -1016,7 +1016,7 @@ export default function App() {
       });
       return unsubscribe;
     }
-  }, [isMaster, userStatus, isAuthReady]);
+  }, [user, isAuthReady]);
 
   const updateSystemSettings = async (newSettings: any) => {
     try {
