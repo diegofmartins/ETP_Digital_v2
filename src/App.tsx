@@ -579,7 +579,7 @@ export default function App() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const lastSavedDataRef = useRef<string>('');
   const [view, setView] = useState<'dashboard' | 'editor' | 'admin'>('dashboard');
-  const [adminTab, setAdminTab] = useState<'etps' | 'users' | 'trash'>('etps');
+  const [adminTab, setAdminTab] = useState<'etps' | 'users' | 'trash'>('users');
   
   const [formData, setFormData] = useState<ETPData>(INITIAL_STATE);
   const [isGenerating, setIsGenerating] = useState<ETPField | 'global' | null>(null);
