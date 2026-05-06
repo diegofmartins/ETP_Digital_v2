@@ -94,5 +94,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  // Not throwing error to avoid infinite loops in React error boundaries/listeners
+  // throw new Error(JSON.stringify(errInfo));
 }

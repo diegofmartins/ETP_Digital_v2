@@ -20,7 +20,7 @@ import {
   serverTimestamp, getDoc, addDoc, limit, getDocs, orderBy, writeBatch 
 } from "firebase/firestore";
 
-const SYSTEM_VERSION = "2.4.1";
+const SYSTEM_VERSION = "2.4.2";
 
 const SYSTEM_PROMPT = `Você é um Especialista em Contratações Públicas da Câmara Municipal de Curitiba (CMC), com profundo conhecimento da Lei 14.133/2021.
 Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP) seguindo RIGOROSAMENTE as diretrizes abaixo:
@@ -712,7 +712,15 @@ export default function App() {
 
   // Auth Listener
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
+    // Fallback timer: Se o Firebase demorar demais, tenta liberar o loading para mostrar o login
+    const fallbackTimer = setTimeout(() => {
+      if (!isAuthReady) {
+        console.warn("[Auth] Timeout de inicialização - forçando liberação do loading");
+        setIsAuthReady(true);
+      }
+    }, 8000);
+
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       // Clear roles/status immediately to avoid UI flickering/leakage from previous user
       setUserRole('user');
       setUserStatus('pending');
@@ -726,6 +734,14 @@ export default function App() {
         console.log(`[Auth] Usuário logado: ${cleanEmail} (UID: ${u.uid})`);
         
         try {
+          const isDefaultMaster = cleanEmail === "diego.martins@cmc.pr.gov.br";
+
+          if (isDefaultMaster) {
+            setUserRole('master');
+            setUserStatus('approved');
+            console.log("[Auth] Master verificado antes da consulta ao BD.");
+          }
+
           // Priority 1: Check if document exists with current UID
           const userRef = doc(db, 'users', u.uid);
           console.log(`[Auth] Verificando existência do doc para UID: ${u.uid}`);
@@ -743,18 +759,22 @@ export default function App() {
               console.log(`[Auth] Doc encontrado por e-mail (ID original: ${existingDoc.id}). Consolidando...`);
               const existingData = existingDoc.data();
 
-              await setDoc(userRef, {
+              // Do not await to avoid hanging
+              setDoc(userRef, {
                 ...existingData,
                 uid: u.uid,
                 email: cleanEmail,
                 lastActive: serverTimestamp(),
                 _consolidatedFrom: existingDoc.id
-              });
-
-              if (existingDoc.id !== u.uid) {
-                await deleteDoc(existingDoc.ref);
-              }
-              userSnap = await getDoc(userRef);
+              }).then(() => {
+                if (existingDoc.id !== u.uid) {
+                  deleteDoc(existingDoc.ref).catch(e => console.warn(e.message));
+                }
+              }).catch(e => console.warn("Erro ao consolidar docs por email", e.message));
+              
+              // We simulate the snapshot for the next if block
+              const simulatedData = { ...existingData, uid: u.uid, email: cleanEmail };
+              userSnap = { exists: () => true, data: () => simulatedData } as any;
             }
           }
 
@@ -773,11 +793,12 @@ export default function App() {
               setShowWelcomePopup(true);
             }
 
-            await updateDoc(userRef, {
+            // DO NOT await this so that hitting write quota does not block auth flow
+            updateDoc(userRef, {
               lastActive: serverTimestamp(),
               displayName: u.displayName || data.displayName || '',
               email: cleanEmail
-            });
+            }).catch(e => console.warn("Erro ao atualizar presença na inicialização:", e.message));
           } else {
             console.log(`[Auth] Criando NOVO perfil para: ${cleanEmail}`);
             const isMasterEmail = cleanEmail === "diego.martins@cmc.pr.gov.br";
@@ -795,12 +816,14 @@ export default function App() {
               lastActive: serverTimestamp()
             };
 
-            await setDoc(userRef, newUserData);
-            console.log(`[Auth] Novo perfil criado com sucesso! Status: ${status}`);
-
             setUserRole(role);
             setUserStatus(status);
             setHasAcceptedTerms(false);
+
+            // DO NOT await this so that hitting write quota doesn not block auth flow
+            setDoc(userRef, newUserData)
+              .then(() => console.log(`[Auth] Novo perfil criado com sucesso! Status: ${status}`))
+              .catch(e => console.warn("Erro ao criar perfil. O usuário continua logado na sessão local.", e.message));
           }
         } catch (err: any) {
           console.error("[Auth Error] Erro crítico na inicialização:", err);
@@ -817,18 +840,29 @@ export default function App() {
         setTrashDrafts([]);
       }
       setIsAuthReady(true);
+      clearTimeout(fallbackTimer);
     });
+    return () => {
+      unsubscribe();
+      clearTimeout(fallbackTimer);
+    };
   }, []);
 
   // Presence Heartbeat
   useEffect(() => {
     if (!user || userStatus !== 'approved') return;
 
+    // Só atualiza se passarem mais de 1 minuto desde a última atualização
+    let lastUpdate = 0;
     const updatePresence = async () => {
+      const now = Date.now();
+      if (now - lastUpdate < 60000) return; // Debounce de 1 minuto
+      
       try {
         await updateDoc(doc(db, 'users', user.uid), {
           lastActive: serverTimestamp()
         });
+        lastUpdate = now;
       } catch (err) {
         console.error("Error updating presence:", err);
       }
