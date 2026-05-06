@@ -3141,54 +3141,6 @@ export default function App() {
           </button>
         </div>
 
-        {adminTab === 'settings' && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm max-w-2xl mx-auto"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-                <Icon name="Settings2" size={24} />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-900">Configurações do Sistema</h3>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Integrações e Notificações</p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
-                  Google Chat Webhook URL
-                </label>
-                <div className="relative">
-                  <input 
-                    type="password"
-                    value={systemSettings.chatWebhookUrl || ''}
-                    onChange={(e) => setSystemSettings(prev => ({ ...prev, chatWebhookUrl: e.target.value }))}
-                    placeholder="https://chat.googleapis.com/v1/spaces/..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none"
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
-                    <Icon name="Zap" size={18} />
-                  </div>
-                </div>
-                <p className="mt-2 text-[10px] text-slate-400 font-medium ml-1">
-                  Esta URL será usada para enviar notificações de novos registros e ETPs criados.
-                </p>
-              </div>
-
-              <button 
-                onClick={() => updateSystemSettings(systemSettings)}
-                className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
-              >
-                <Icon name="CheckCircle" size={18} /> Salvar Configurações
-              </button>
-            </div>
-          </motion.div>
-        )}
-
         {adminTab === 'users' && (
           <div className="relative w-full sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -3476,6 +3428,52 @@ export default function App() {
           )}
         </div>
       </>
+    ) : adminTab === 'settings' ? (
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm max-w-2xl mx-auto w-full"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+            <Icon name="Settings2" size={24} />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-slate-900">Configurações do Sistema</h3>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Integrações e Notificações</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+              Google Chat Webhook URL
+            </label>
+            <div className="relative">
+              <input 
+                type="password"
+                value={systemSettings.chatWebhookUrl || ''}
+                onChange={(e) => setSystemSettings(prev => ({ ...prev, chatWebhookUrl: e.target.value }))}
+                placeholder="https://chat.googleapis.com/v1/spaces/..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                <Icon name="Zap" size={18} />
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-slate-400 font-medium ml-1">
+              Esta URL será usada para enviar notificações de novos registros e ETPs criados.
+            </p>
+          </div>
+
+          <button 
+            onClick={() => updateSystemSettings(systemSettings)}
+            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+          >
+            <Icon name="CheckCircle" size={18} /> Salvar Configurações
+          </button>
+        </div>
+      </motion.div>
     ) : (
         <div className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
