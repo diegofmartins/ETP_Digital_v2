@@ -52,5 +52,5 @@ Caso encontre uma **página em branco** ou erro de **permissão**:
 2. Recarregue a página (F5 ou Ctrl+R).
 3. Limpe o cache do navegador se o problema persistir.
 
-**Versão do Sistema:** 2.4.1
+**Versão do Sistema:** 2.4.2
 **Câmara Municipal de Curitiba**

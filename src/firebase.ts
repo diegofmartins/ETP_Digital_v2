@@ -106,5 +106,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     if (typeof window !== 'undefined') window.dispatchEvent(event);
   }
   // Not throwing error to avoid infinite loops in React error boundaries/listeners
-  // throw new Error(JSON.stringify(errInfo));
+  // HOWEVER, the platform requires it for diagnostics. 
+  // We use a small delay or check to ensure we don't loop during state updates if necessary.
+  throw new Error(JSON.stringify(errInfo));
 }

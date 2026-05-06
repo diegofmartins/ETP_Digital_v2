@@ -958,7 +958,7 @@ export default function App() {
           }
           
           const deletedAt = deletedAtDoc.toDate().getTime();
-          const isExpired = now - deletedAt > 24 * 60 * 60 * 1000;
+          const isExpired = now - deletedAt > 72 * 60 * 60 * 1000;
           return { id: doc.id, ...data, isExpired };
         });
         
@@ -1770,10 +1770,24 @@ export default function App() {
 
       const resultText = response.text;
       if (resultText) {
-        const generatedData = JSON.parse(resultText);
-        setFormData(prev => ({ ...prev, ...generatedData }));
-        setShowAdvanced(true);
-        setActiveTab('technical'); // Switch to technical fields after generation
+        let jsonContent = resultText;
+        // Se a IA retornar markdown, extraímos apenas o conteúdo do bloco JSON
+        if (resultText.includes("```json")) {
+          jsonContent = resultText.split("```json")[1].split("```")[0];
+        } else if (resultText.includes("```")) {
+          jsonContent = resultText.split("```")[1].split("```")[0];
+        }
+        
+        try {
+          const generatedData = JSON.parse(jsonContent.trim());
+          setFormData(prev => ({ ...prev, ...generatedData }));
+          setShowAdvanced(true);
+          setActiveTab('technical');
+        } catch (parseErr) {
+          console.error("JSON Parse Error:", parseErr, "Content:", jsonContent);
+          // Fallback: se falhar o parse do JSON completo, tenta encontrar padrões ou avisa o usuário
+          setApiError("A IA gerou um formato inválido. Tente novamente ou use a geração por campo individual.");
+        }
       }
     } catch (err: any) {
       setApiError(err.message || "Erro na geração global. Tente preencher os campos básicos primeiro.");
@@ -3460,19 +3474,9 @@ export default function App() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm max-w-2xl mx-auto w-full"
+        className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 p-6 sm:p-12 shadow-sm w-full"
       >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-            <Icon name="Settings2" size={24} />
-          </div>
-          <div>
-            <h3 className="text-xl font-black text-slate-900">Configurações do Sistema</h3>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Integrações e Notificações</p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
+        <div className="space-y-8 max-w-4xl">
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
               Google Chat Webhook URL
@@ -3553,7 +3557,7 @@ export default function App() {
               ) : (
                 sortedTrash.map(draft => {
                   const deletedAt = draft.deletedAt?.toDate().getTime() || 0;
-                  const timeLeft = Math.max(0, 24 * 60 * 60 * 1000 - (Date.now() - deletedAt));
+                  const timeLeft = Math.max(0, 72 * 60 * 60 * 1000 - (Date.now() - deletedAt));
                   const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
                   const minsLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
