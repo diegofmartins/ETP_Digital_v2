@@ -105,7 +105,7 @@ service cloud.firestore {
     // COLEÇÃO: CONFIG (SYSTEM)
     // -------------------------------------------------------------------------
     match /config/system {
-      allow read: if isApproved(); // Permitido para approved para rodar o app
+      allow read: if isSignedIn(); // Allow all signed-in users to read config for notifications
       allow write: if isMaster();
     }
 

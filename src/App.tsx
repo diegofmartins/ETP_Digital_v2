@@ -921,6 +921,12 @@ export default function App() {
       }
     }, (err) => {
       console.warn("User profile sync error:", err);
+      // Fallback: If we can't read the user profile, assume pending unless default master
+      const cleanEmail = (user.email || '').toLowerCase().trim();
+      if (cleanEmail === "diego.martins@cmc.pr.gov.br") {
+        setUserRole('master');
+        setUserStatus('approved');
+      }
     });
 
     return unsubscribe;
@@ -1013,6 +1019,9 @@ export default function App() {
         if (docSnap.exists()) {
           setSystemSettings(docSnap.data());
         }
+      }, (err) => {
+        console.warn("System settings listener error:", err);
+        // Do not throw here to avoid crashing the app for pending users if permissions are tight
       });
       return unsubscribe;
     }
@@ -1157,14 +1166,29 @@ export default function App() {
     }
   };
 
-  // Auto-save
+  // Auto-save & Local Storage Backup
   useEffect(() => {
-    if (!user || view !== 'editor') return;
+    if (!user || view !== 'editor' || !formData) return;
+    
+    // Immediate LocalStorage Backup for safety
+    try {
+      localStorage.setItem('viabiliza_last_edit', JSON.stringify({
+        id: currentDraftId,
+        uid: user.uid,
+        email: user.email,
+        data: formData,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // Might fail if quota exceeded (images in formData?)
+      console.warn("Local storage backup failed:", e);
+    }
+
     const timer = setTimeout(() => {
       saveDraft();
-    }, 180000); // 3 minutos
+    }, 30000); // Reduce to 30 seconds for better responsiveness
     return () => clearTimeout(timer);
-  }, [formData, user, view]);
+  }, [formData, user, view, currentDraftId]);
 
   const loadDraft = (draft: any, adminView = false) => {
     if (draft && draft.data) {
@@ -3474,13 +3498,21 @@ export default function App() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 p-6 sm:p-12 shadow-sm w-full"
+        className="bg-white rounded-2xl sm:rounded-[32px] border border-slate-200 shadow-sm w-full overflow-hidden"
       >
-        <div className="space-y-8 max-w-4xl">
+        <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Configurações Gerais do Sistema</h3>
+        </div>
+        <div className="p-6 sm:p-10 space-y-8 max-w-4xl">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
-              Google Chat Webhook URL
-            </label>
+            <div className="flex items-center justify-between mb-4">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Google Chat Webhook URL
+              </label>
+              <span className="text-[8px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                Notificações Ativas
+              </span>
+            </div>
             <div className="relative">
               <input 
                 type="password"
@@ -3494,16 +3526,44 @@ export default function App() {
               </div>
             </div>
             <p className="mt-2 text-[10px] text-slate-400 font-medium ml-1">
-              Esta URL será usada para enviar notificações de novos registros e ETPs criados.
+              Esta URL será usada para enviar notificações de novos registros e ETPs criados para o Master.
             </p>
           </div>
 
-          <button 
-            onClick={() => updateSystemSettings(systemSettings)}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
-          >
-            <Icon name="CheckCircle" size={18} /> Salvar Configurações
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button 
+              onClick={() => updateSystemSettings(systemSettings)}
+              className="bg-indigo-600 text-white py-4 px-6 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+            >
+              <Icon name="CheckCircle" size={18} /> Salvar Alterações
+            </button>
+            <button 
+              onClick={() => {
+                const testMsg = "🔔 *Teste de Notificação*\n\nO sistema de notificações do ETP Digital (VIABILIZA) está configurado corretamente!";
+                if (systemSettings.chatWebhookUrl) {
+                  notify.test().then(() => setApiError("Notificação de teste enviada!")).catch(e => setApiError("Erro no teste: " + e.message));
+                } else {
+                  setApiError("Webhook URL não configurada.");
+                }
+              }}
+              className="bg-slate-100 text-slate-600 py-4 px-6 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+            >
+              <Icon name="Zap" size={18} /> Testar Webhook
+            </button>
+          </div>
+          
+          <div className="pt-8 border-t border-slate-100">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Integridade e Backups</h4>
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
+              <Icon name="AlertTriangle" size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-amber-900 mb-1">Backup Automático Ativo</p>
+                <p className="text-[10px] text-amber-700 leading-relaxed">
+                  O sistema realiza rascunhos automáticos a cada 30 segundos durante a edição e mantém uma cópia de segurança local no seu navegador.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </motion.div>
     ) : (
