@@ -577,6 +577,7 @@ export default function App() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [trashDrafts, setTrashDrafts] = useState<any[]>([]);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const lastSavedDataRef = useRef<string>('');
   const [view, setView] = useState<'dashboard' | 'editor' | 'admin'>('dashboard');
   const [adminTab, setAdminTab] = useState<'etps' | 'users' | 'trash'>('etps');
   
@@ -1039,6 +1040,13 @@ export default function App() {
 
   const saveDraft = async (manual = false) => {
     if (!user || !formData || isAdminViewing) return;
+    
+    const currentDataStr = JSON.stringify(formData);
+    // Para save automático, não salvar se não houve real mudança.
+    if (!manual && currentDataStr === lastSavedDataRef.current) {
+      return; 
+    }
+    
     setIsSaving(true);
     try {
       const draftData = {
@@ -1059,6 +1067,9 @@ export default function App() {
         });
         setCurrentDraftId(docRef.id);
       }
+      
+      lastSavedDataRef.current = currentDataStr;
+      
       if (manual) {
         // Show success message or something
       }
@@ -1074,7 +1085,7 @@ export default function App() {
     if (!user || view !== 'editor') return;
     const timer = setTimeout(() => {
       saveDraft();
-    }, 3000);
+    }, 15000); // Alterado de 3s para 15s para economizar quota
     return () => clearTimeout(timer);
   }, [formData, user, view]);
 
@@ -1094,8 +1105,10 @@ export default function App() {
       }
       
       setFormData(data);
+      lastSavedDataRef.current = JSON.stringify(data);
     } else {
       setFormData(INITIAL_STATE);
+      lastSavedDataRef.current = JSON.stringify(INITIAL_STATE);
     }
     setCurrentDraftId(draft.id);
     setIsAdminViewing(adminView);
@@ -1105,6 +1118,7 @@ export default function App() {
 
   const createNewETP = () => {
     setFormData(INITIAL_STATE);
+    lastSavedDataRef.current = JSON.stringify(INITIAL_STATE);
     setCurrentDraftId(null);
     setIsAdminViewing(false);
     setView('editor');
