@@ -610,6 +610,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'diagnostic' | 'technical'>('diagnostic');
   const [expandedSections, setExpandedSections] = useState<string[]>(['0. DIAGNÓSTICO INICIAL', 'I - INFORMAÇÕES GERAIS', 'II - DEMANDA E PROSPECÇÃO DE SOLUÇÕES', 'III - DESCRIÇÃO DA SOLUÇÃO ESCOLHIDA', 'IV - ANÁLISE DE RISCOS E CONCLUSÃO']);
+  const [isSavingExit, setIsSavingExit] = useState(false);
   const [isAdminViewing, setIsAdminViewing] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number, total: number, type: 'ETPs' | 'Usuários' } | null>(null);
   const [backupToImport, setBackupToImport] = useState<any | null>(null);
@@ -860,34 +861,6 @@ export default function App() {
     };
   }, []);
 
-  // Presence Heartbeat
-  useEffect(() => {
-    if (!user || userStatus !== 'approved') return;
-
-    // Só atualiza se passarem mais de 1 minuto desde a última atualização
-    let lastUpdate = 0;
-    const updatePresence = async () => {
-      const now = Date.now();
-      if (now - lastUpdate < 60000) return; // Debounce de 1 minuto
-      
-      try {
-        await updateDoc(doc(db, 'users', user.uid), {
-          lastActive: serverTimestamp()
-        });
-        lastUpdate = now;
-      } catch (err) {
-        console.error("Error updating presence:", err);
-      }
-    };
-
-    // Update immediately on mount/auth
-    updatePresence();
-
-    // Then every 2 minutes
-    const interval = setInterval(updatePresence, 120000);
-    return () => clearInterval(interval);
-  }, [user, userStatus]);
-
   // Master check also considers the default master email
   const isMaster = userRole === 'master' || user?.email === "diego.martins@cmc.pr.gov.br";
 
@@ -1024,13 +997,6 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    if (user) {
-      // Non-blocking attempt to clear presence
-      const userRef = doc(db, "users", user.uid);
-      updateDoc(userRef, { lastActive: null }).catch((e) =>
-        console.error("Error clearing presence on logout", e)
-      );
-    }
     await signOut(auth);
     setView('dashboard');
     setCurrentDraftId(null);
@@ -1080,12 +1046,30 @@ export default function App() {
     }
   };
 
+  const handleExitEditor = async () => {
+    if (!isAdminViewing) {
+      setIsSavingExit(true); // Popup starts
+      const startTime = Date.now();
+      await saveDraft(true);
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, 3000 - elapsedTime);
+      
+      setTimeout(() => {
+        setIsSavingExit(false);
+        setView('dashboard');
+      }, remainingTime);
+    } else {
+      setView('admin');
+      setIsAdminViewing(false);
+    }
+  };
+
   // Auto-save
   useEffect(() => {
     if (!user || view !== 'editor') return;
     const timer = setTimeout(() => {
       saveDraft();
-    }, 15000); // Alterado de 3s para 15s para economizar quota
+    }, 180000); // 3 minutos
     return () => clearTimeout(timer);
   }, [formData, user, view]);
 
@@ -2473,6 +2457,25 @@ export default function App() {
         </div>
       )}
 
+      {/* Saving Exit Popup */}
+      {isSavingExit && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl border border-indigo-100"
+          >
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <Loader2 size={32} className="animate-spin" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900 mb-2 text-center">Salvando...</h3>
+            <p className="text-slate-500 text-sm leading-relaxed text-center">
+              Estamos salvando suas alterações antes de sair.
+            </p>
+          </motion.div>
+        </div>
+      )}
+
       {/* Welcome Disclaimer Popup */}
       {showWelcomePopup && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4 overflow-y-auto">
@@ -3197,7 +3200,6 @@ export default function App() {
             </thead>
             <tbody>
               {sortedUsers.map(u => {
-                const isOnline = u.lastActive && (Date.now() - u.lastActive.toMillis() < 300000); 
                 
                 return (
                   <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -3207,7 +3209,6 @@ export default function App() {
                           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold text-[10px] sm:text-xs uppercase">
                             {u.displayName?.substring(0, 2) || '??'}
                           </div>
-                          <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isOnline ? 'bg-green-500' : 'bg-slate-300'}`} />
                         </div>
                         <div className="min-w-0">
                           <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2 truncate">
@@ -3490,10 +3491,7 @@ export default function App() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar no-print">
               <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <button 
-                  onClick={() => {
-                    setView(isAdminViewing ? 'admin' : 'dashboard');
-                    setIsAdminViewing(false);
-                  }} 
+                  onClick={handleExitEditor} 
                   className="p-2 hover:bg-slate-100 rounded-xl transition-colors shrink-0"
                 >
                   <Icon name="ChevronDown" size={20} className="rotate-90 text-slate-400" />
