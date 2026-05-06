@@ -9,6 +9,7 @@ import {
   RefreshCcw, LogOut, FileDown, Users
 } from "lucide-react";
 import { ETPData, ETPField, ETPStructureItem, ETPExample } from "./types";
+import { notifyNewUserRegistration, notifyUserApproved, notifyNewETPCreated, sendGoogleChatNotification } from "./services/notificationService";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType, ImageRun } from "docx";
 import { saveAs } from "file-saver";
 import JoditEditor from 'jodit-react';
@@ -835,7 +836,12 @@ export default function App() {
 
             // DO NOT await this so that hitting write quota doesn not block auth flow
             setDoc(userRef, newUserData)
-              .then(() => console.log(`[Auth] Novo perfil criado com sucesso! Status: ${status}`))
+              .then(() => {
+                console.log(`[Auth] Novo perfil criado com sucesso! Status: ${status}`);
+                if (status === 'pending') {
+                  notifyNewUserRegistration(cleanEmail, u.displayName || 'Usuário').catch(e => console.warn("Erro ao enviar notificação de registro:", e.message));
+                }
+              })
               .catch(e => console.warn("Erro ao criar perfil. O usuário continua logado na sessão local.", e.message));
           }
         } catch (err: any) {
@@ -1032,6 +1038,9 @@ export default function App() {
           createdAt: serverTimestamp()
         });
         setCurrentDraftId(docRef.id);
+        
+        // Notify about new ETP
+        notifyNewETPCreated(user.email || 'Usuário', draftData.title).catch(e => console.warn("Erro ao enviar notificação de novo ETP:", e.message));
       }
       
       lastSavedDataRef.current = currentDataStr;
@@ -2990,6 +2999,18 @@ export default function App() {
           >
             <Icon name="Download" size={16} /> <span className="hidden sm:inline">Exportar Backup</span><span className="sm:hidden">Exportar</span>
           </button>
+          <button 
+            onClick={() => {
+              sendGoogleChatNotification("🔔 *Teste de Notificação*\n\nO sistema de notificações do ETP Digital está operando corretamente!").then(() => {
+                setApiError("Notificação de teste enviada para o Google Chat!");
+                setTimeout(() => setApiError(null), 3000);
+              }).catch(e => setApiError("Erro ao enviar teste: " + e.message));
+            }}
+            className="flex-1 sm:flex-none justify-center bg-green-50 text-green-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-green-100 transition-all border border-green-100"
+            title="Enviar uma mensagem de teste para o Google Chat"
+          >
+            <Icon name="Zap" size={16} /> <span className="hidden sm:inline">Testar Chat</span><span className="sm:hidden">Testar</span>
+          </button>
           {false && (
             <>
               <button 
@@ -3240,7 +3261,10 @@ export default function App() {
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {u.status !== 'approved' && (
                         <button 
-                          onClick={() => updateUserStatus(u.id, 'approved')}
+                          onClick={() => {
+                            updateUserStatus(u.id, 'approved');
+                            notifyUserApproved(u.email, u.displayName || 'Usuário').catch(e => console.warn("Erro ao enviar notificação de aprovação:", e.message));
+                          }}
                           className="px-2 sm:px-3 py-1.5 bg-green-600 text-white rounded-lg text-[9px] sm:text-[10px] font-bold hover:bg-green-700 transition-all"
                         >
                           Ativar

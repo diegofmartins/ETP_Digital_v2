@@ -42,7 +42,7 @@ Usuários com perfil "Master" têm ferramentas adicionais:
 - **Gestão de Usuários:** Aprovar novos servidores, alterar cargos (Servidor vs Master) ou bloquear acessos.
 - **Gestão de Documentos:** Visualizar todos os ETPs da casa, restaurar documentos da lixeira ou reatribuir a propriedade de um ETP (trocar o autor).
 - **Lixeira:** Recuperar documentos excluídos acidentalmente por até 24 horas.
-- **Notificações por E-mail:** O sistema está configurado para avisar o administrador Master por e-mail sempre que um novo usuário solicitar acesso. Esta funcionalidade requer a configuração da chave `RESEND_API_KEY` nas configurações de ambiente do sistema.
+- **Notificações:** O sistema está configurado para avisar o administrador Master via Google Chat sempre que um novo usuário solicitar acesso ou um novo ETP for criado. Esta funcionalidade requer a configuração da URL do Webhook nas configurações de ambiente do sistema (`VITE_GOOGLE_CHAT_WEBHOOK_URL`).
 
 ---
 
