@@ -1029,10 +1029,38 @@ export default function App() {
   };
 
   const notify = {
-    registration: (email: string, name: string) => notifyNewUserRegistration(email, name, systemSettings.chatWebhookUrl),
-    approved: (email: string, name: string) => notifyUserApproved(email, name, systemSettings.chatWebhookUrl),
-    created: (email: string, title: string) => notifyNewETPCreated(email, title, systemSettings.chatWebhookUrl),
-    test: () => sendGoogleChatNotification("🔔 *Teste de Notificação*\n\nO sistema de notificações do ETP Digital está operando corretamente!", systemSettings.chatWebhookUrl)
+    registration: async (email: string, name: string) => {
+      let url = systemSettings.chatWebhookUrl;
+      if (!url) {
+        const snap = await getDoc(doc(db, 'config', 'system'));
+        if (snap.exists()) url = snap.data().chatWebhookUrl;
+      }
+      return notifyNewUserRegistration(email, name, url);
+    },
+    approved: async (email: string, name: string) => {
+      let url = systemSettings.chatWebhookUrl;
+      if (!url) {
+        const snap = await getDoc(doc(db, 'config', 'system'));
+        if (snap.exists()) url = snap.data().chatWebhookUrl;
+      }
+      return notifyUserApproved(email, name, url);
+    },
+    created: async (email: string, title: string) => {
+      let url = systemSettings.chatWebhookUrl;
+      if (!url) {
+        const snap = await getDoc(doc(db, 'config', 'system'));
+        if (snap.exists()) url = snap.data().chatWebhookUrl;
+      }
+      return notifyNewETPCreated(email, title, url);
+    },
+    test: async () => {
+      let url = systemSettings.chatWebhookUrl;
+      if (!url) {
+        const snap = await getDoc(doc(db, 'config', 'system'));
+        if (snap.exists()) url = snap.data().chatWebhookUrl;
+      }
+      return sendGoogleChatNotification("🔔 *Teste de Notificação*\n\nO sistema de notificações do ETP Digital está operando corretamente!", url);
+    }
   };
 
   const handleLogin = async (e?: React.MouseEvent) => {
