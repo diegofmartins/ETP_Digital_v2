@@ -39,6 +39,7 @@ Sua tarefa é elaborar ou revisar seções de um Estudo Técnico Preliminar (ETP
    - NÃO inclua o nome da seção ou o título do campo no início do texto gerado.
    - NÃO repita as mesmas frases ou justificativas em múltiplos campos.
    - Retorne APENAS o texto que será inserido diretamente no documento final.
+   - Em chamadas globais que solicitam JSON, retorne SEMPRE um JSON válido e puro, sem textos explicativos antes ou depois.
    - Use listas com hífens (-) para clareza quando necessário.
    - Utilize os dados de DIAGNÓSTICO INICIAL para fundamentar todas as seções.
 
@@ -577,8 +578,6 @@ export default function App() {
   const [drafts, setDrafts] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [trashDrafts, setTrashDrafts] = useState<any[]>([]);
-  const [backupsList, setBackupsList] = useState<any[]>([]);
-  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const lastSavedDataRef = useRef<string>('');
   const [view, setView] = useState<'dashboard' | 'editor' | 'admin'>('dashboard');
@@ -1030,61 +1029,6 @@ export default function App() {
     }
   };
 
-  const fetchBackups = async () => {
-    setIsLoadingBackups(true);
-    try {
-      const response = await fetch('/api/backups');
-      if (response.ok) {
-        const data = await response.json();
-        setBackupsList(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error("Erro ao carregar backups:", err);
-    } finally {
-      setIsLoadingBackups(false);
-    }
-  };
-
-  const handleTriggerBackup = async () => {
-    setIsLoadingBackups(true);
-    try {
-      const response = await fetch('/api/backups/trigger', { method: 'POST' });
-      if (response.ok) {
-        setApiError("Backup iniciado com sucesso!");
-        setTimeout(() => setApiError(null), 3000);
-        setTimeout(fetchBackups, 2000); // Wait a bit for it to complete
-      }
-    } catch (err) {
-      console.error("Erro ao disparar backup:", err);
-    } finally {
-      setIsLoadingBackups(false);
-    }
-  };
-
-  const downloadBackup = (backup: any) => {
-    try {
-      const blob = new Blob([backup.data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = backup.filename || `backup_${backup.id}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Erro ao baixar backup:", err);
-      setApiError("Erro ao processar arquivo de backup.");
-      setTimeout(() => setApiError(null), 3000);
-    }
-  };
-
-  useEffect(() => {
-    if (view === 'admin' && adminTab === 'settings' && isMaster) {
-      fetchBackups();
-    }
-  }, [view, adminTab, isMaster]);
-
   const notify = {
     registration: async (email: string, name: string) => {
       let url = systemSettings.chatWebhookUrl;
@@ -1519,6 +1463,24 @@ export default function App() {
     }
   };
 
+  const handleAcceptTerms = async () => {
+    if (!user || !welcomeCheckbox) return;
+    setIsSaving(true);
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, { 
+        hasAcceptedTerms: true,
+        acceptedTermsAt: serverTimestamp()
+      });
+      setHasAcceptedTerms(true);
+      setShowWelcomePopup(false);
+    } catch (err: any) {
+      setApiError("Erro ao salvar termo de ciência: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const exportBackup = async () => {
     if (userRole !== 'master') return;
     
@@ -1661,24 +1623,6 @@ export default function App() {
     }
   };
 
-  const handleAcceptTerms = async () => {
-    if (!user || !welcomeCheckbox) return;
-    setIsSaving(true);
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, { 
-        hasAcceptedTerms: true,
-        acceptedTermsAt: serverTimestamp()
-      });
-      setHasAcceptedTerms(true);
-      setShowWelcomePopup(false);
-    } catch (err: any) {
-      setApiError("Erro ao salvar termo de ciência: " + err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleAiAssist = async (fieldId: ETPField) => {
     if (!formData || isAdminViewing) return;
     setApiError(null);
@@ -1730,10 +1674,17 @@ export default function App() {
       });
 
       const result = response.text;
+      console.log(`AI Assist Response for ${fieldId}:`, result);
+      
       if (result) {
-        setAiPopup({ fieldId, content: result.trim() });
+        // Clean markdown if present
+        const cleaned = result.replace(/```[a-z]*\n?|```/g, '').trim();
+        setAiPopup({ fieldId, content: cleaned });
+      } else {
+        throw new Error("A IA não retornou conteúdo.");
       }
     } catch (err: any) {
+      console.error(`Erro AI Assist (${fieldId}):`, err);
       setApiError(err.message || "Erro ao gerar conteúdo");
     } finally {
       setIsGenerating(null);
@@ -1826,13 +1777,31 @@ export default function App() {
       });
 
       const resultText = response.text;
+      console.log("AI Raw Response:", resultText);
+      
       if (resultText) {
-        const generatedData = JSON.parse(resultText);
-        setFormData(prev => ({ ...prev, ...generatedData }));
-        setShowAdvanced(true);
-        setActiveTab('technical'); // Switch to technical fields after generation
+        try {
+          // Clean JSON tags if present
+          const jsonCleaned = resultText.replace(/```json\n?|```/g, '').trim();
+          const generatedData = JSON.parse(jsonCleaned);
+          console.log("AI Parsed Data:", generatedData);
+          
+          if (Object.keys(generatedData).length === 0) {
+            throw new Error("A IA retornou um objeto vazio. Tente fornecer mais detalhes no Diagnóstico Inicial.");
+          }
+          
+          setFormData(prev => ({ ...prev, ...generatedData }));
+          setShowAdvanced(true);
+          setActiveTab('technical');
+        } catch (parseErr: any) {
+          console.error("Erro ao processar JSON da IA:", parseErr, resultText);
+          throw new Error("A IA retornou um formato inválido. Tente novamente. Detalhe: " + parseErr.message);
+        }
+      } else {
+        throw new Error("A IA não retornou nenhum conteúdo.");
       }
     } catch (err: any) {
+      console.error("Erro Global Generate:", err);
       setApiError(err.message || "Erro na geração global. Tente preencher os campos básicos primeiro.");
     } finally {
       setIsGenerating(null);
@@ -2706,68 +2675,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Backup Import Confirmation Modal */}
-      {backupToImport && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white p-8 rounded-[32px] shadow-2xl max-w-md w-full"
-          >
-            <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-amber-100">
-              <Icon name="Download" size={32} className="rotate-180" />
-            </div>
-            <h3 className="text-2xl font-black text-slate-900 mb-2">Confirmar Restauração</h3>
-            <p className="text-slate-500 mb-8 leading-relaxed">
-              O arquivo contém <strong>{backupToImport.drafts.length} ETPs</strong> e <strong>{backupToImport.users?.length || 0} usuários</strong>. 
-              Deseja prosseguir com a importação? Dados existentes com o mesmo ID serão sobrescritos.
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setBackupToImport(null)}
-                className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={confirmImportBackup}
-                className="flex-2 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
-              >
-                Confirmar Importação
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Global Loading Overlay */}
-      {importProgress && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white p-8 rounded-[32px] shadow-2xl max-w-sm w-full text-center"
-          >
-            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-100">
-              <Icon name="Loader2" size={32} className="animate-spin" />
-            </div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">
-              Restaurando {importProgress.type}
-            </h3>
-            <p className="text-slate-500 text-sm mb-6">
-              Por favor, aguarde. Importando item {importProgress.current} de {importProgress.total}.
-            </p>
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-              <motion.div 
-                className="bg-indigo-600 h-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
-              />
-            </div>
-          </motion.div>
-        </div>
-      )}
-
       {aiPopup && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4 no-print">
           <motion.div 
@@ -2921,6 +2828,68 @@ export default function App() {
             >
               Fechar
             </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Backup Import Confirmation Modal */}
+      {backupToImport && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-6 sm:p-8 rounded-[32px] shadow-2xl max-w-md w-full text-center"
+          >
+            <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-100">
+              <Icon name="Download" size={32} className="rotate-180" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Confirmar Restauração</h3>
+            <p className="text-slate-500 mb-8 leading-relaxed text-xs">
+              O arquivo contém <strong>{backupToImport.drafts.length} ETPs</strong> e <strong>{backupToImport.users?.length || 0} usuários</strong>. 
+              Deseja prosseguir com a importação? Dados existentes com o mesmo ID serão sobrescritos.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setBackupToImport(null)}
+                className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all font-black uppercase tracking-widest text-[10px]"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmImportBackup}
+                className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 font-black uppercase tracking-widest text-[10px]"
+              >
+                Confirmar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Global Loading Overlay */}
+      {importProgress && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6 text-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-8 rounded-[32px] shadow-2xl max-w-sm w-full"
+          >
+            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-100">
+              <Icon name="Loader2" size={32} className="animate-spin" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">
+              Restaurando {importProgress.type}
+            </h3>
+            <p className="text-slate-500 text-sm mb-6">
+              Por favor, aguarde. Importando item {importProgress.current} de {importProgress.total}.
+            </p>
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <motion.div 
+                className="bg-indigo-600 h-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+              />
+            </div>
           </motion.div>
         </div>
       )}
@@ -3130,16 +3099,6 @@ export default function App() {
           <p className="text-slate-500 text-xs sm:text-sm">Visualização global de todos os ETPs e usuários da Câmara.</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <label className="flex-1 sm:flex-none justify-center bg-slate-100 text-slate-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-slate-200 transition-all cursor-pointer">
-            <Icon name="Download" size={16} className="rotate-180" /> <span className="hidden sm:inline">Importar Backup</span><span className="sm:hidden">Importar</span>
-            <input type="file" className="hidden" accept=".json" onChange={importBackup} />
-          </label>
-          <button 
-            onClick={exportBackup}
-            className="flex-1 sm:flex-none justify-center bg-slate-100 text-slate-600 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-bold text-[10px] sm:text-xs flex items-center gap-2 hover:bg-slate-200 transition-all"
-          >
-            <Icon name="Download" size={16} /> <span className="hidden sm:inline">Exportar Backup</span><span className="sm:hidden">Exportar</span>
-          </button>
           <button 
             onClick={() => {
               notify.test().then(() => {
@@ -3553,60 +3512,33 @@ export default function App() {
 
           <button 
             onClick={() => updateSystemSettings(systemSettings)}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-100 flex items-center justify-center gap-2"
           >
             <Icon name="CheckCircle" size={18} /> Salvar Configurações
           </button>
 
           <div className="pt-8 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-                  <Icon name="Database" size={18} />
-                </div>
-                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Backups Automáticos</h4>
-              </div>
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-1">Backup de Dados (Manual)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button 
-                onClick={handleTriggerBackup}
-                disabled={isLoadingBackups}
-                className="text-[10px] font-black text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-full hover:bg-indigo-50 transition-all uppercase tracking-widest disabled:opacity-50"
+                onClick={exportBackup}
+                disabled={isSaving}
+                className="flex items-center justify-center gap-3 bg-white border-2 border-slate-100 p-4 rounded-2xl hover:border-indigo-600 hover:text-indigo-600 transition-all text-slate-600 text-[10px] font-black uppercase tracking-widest"
               >
-                {isLoadingBackups ? 'Processando...' : 'Backup Agora'}
-              </button>
-            </div>
-            
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-              <div className="flex items-center gap-2 mb-4">
-                <Icon name="Clock" size={14} className="text-slate-400" />
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Últimos 7Backups (23:59:59)</p>
-              </div>
-
-              {backupsList.length === 0 ? (
-                <div className="text-center py-6 text-slate-400 text-xs italic">Nenhum backup disponível ainda.</div>
-              ) : (
-                <div className="space-y-2">
-                  {backupsList.map((backup) => (
-                    <div key={backup.id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center">
-                          <Icon name="FileJson" size={16} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-900">{backup.filename}</p>
-                          <p className="text-[9px] text-slate-400 font-medium">{new Date(backup.createdAt).toLocaleString('pt-BR')}</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => downloadBackup(backup)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        title="Download backup"
-                      >
-                        <Icon name="Download" size={16} />
-                      </button>
-                    </div>
-                  ))}
+                <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+                  <Icon name="Download" size={16} />
                 </div>
-              )}
+                Exportar Backup JSON
+              </button>
+              <label 
+                className={`flex items-center justify-center gap-3 bg-white border-2 border-slate-100 p-4 rounded-2xl transition-all text-slate-600 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:border-amber-500 hover:text-amber-500 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <div className="w-8 h-8 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center">
+                  <Icon name="RefreshCcw" size={16} />
+                </div>
+                Importar Backup JSON
+                <input type="file" className="hidden" accept=".json" onChange={importBackup} disabled={isSaving} />
+              </label>
             </div>
           </div>
         </div>

@@ -51,10 +51,6 @@ service cloud.firestore {
       allow write: if isMaster();
     }
 
-    match /backups/{backupId} {
-      allow read, write: if isMaster();
-    }
-
     match /test/connection {
       allow read: if true;
     }
