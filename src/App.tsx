@@ -624,6 +624,11 @@ export default function App() {
   const [userSort, setUserSort] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'displayName', direction: 'asc' });
   const [userSearch, setUserSearch] = useState('');
   const [reassignState, setReassignState] = useState<{ draftId: string, currentEmail: string, title: string } | null>(null);
+  const [showImportDocModal, setShowImportDocModal] = useState(false);
+  const [pastedDocText, setPastedDocText] = useState('');
+  const [isExtractingDoc, setIsExtractingDoc] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [isHoveredDocBtn, setIsHoveredDocBtn] = useState(false);
 
   const isReadOnly = isAdminViewing || formData?.status === 'completed';
 
@@ -1620,6 +1625,164 @@ export default function App() {
       setImportProgress(null);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleExtractFromDoc = async () => {
+    if (!pastedDocText || pastedDocText.trim().length < 50) {
+      setExtractError("Por favor, forneça ou cole um texto de documento com pelo menos 50 caracteres para que a IA possa realizar uma análise útil.");
+      return;
+    }
+    setExtractError(null);
+    setIsExtractingDoc(true);
+    try {
+      const originalLength = pastedDocText.length;
+      
+      // 1. Limpeza e compactação de espaços em branco / quebras de linha redundantes
+      let condensed = pastedDocText.replace(/\r\n/g, '\n');
+      // Reduz espaços e tabulações consecutivas para um único espaço
+      condensed = condensed.replace(/[ \t]{2,}/g, ' ');
+      // Reduz múltiplas linhas vazias seguidas para no máximo duas
+      condensed = condensed.replace(/\n{3,}/g, '\n\n');
+      
+      // 2. Limitação de tamanho do texto bruto para evitar estourar o buffer e limites do Proxy RPC do navegador
+      const MAX_SAFE_CHARS = 32000;
+      let isTruncated = false;
+      if (condensed.length > MAX_SAFE_CHARS) {
+        condensed = condensed.substring(0, MAX_SAFE_CHARS);
+        isTruncated = true;
+      }
+      
+      console.log(`[Document Extraction] Compacted payload: ${originalLength} chars -> ${condensed.length} chars (Truncated: ${isTruncated})`);
+
+      const ai = new GoogleGenAI({ 
+        apiKey: process.env.GEMINI_API_KEY,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build'
+          }
+        }
+      });
+      
+      const prompt = `Você é um assessor de licitações especialista na Lei 14.133/2021 (Nova Lei de Licitações) e na elaboração de Estudos Técnicos Preliminares (ETP).
+Recebemos um termo de referência (TR), edital ou ETP de uma contratação anterior ou similar com o seguinte conteúdo:
+---
+${condensed}
+---
+${isTruncated ? '\n(Atenção: O documento acima foi parcialmente delimitado para viabilizar a análise técnica no navegador do usuário, mas contém todas as partes principais relevantes)\n' : ''}
+
+Sua tarefa é analisar o documento antigo acima e preencher as 8 perguntas essenciais (Diagnóstico Inicial) para iniciar o novo ETP.
+Você deve retornar APENAS um objeto JSON válido, contendo as respostas para os campos do Diagnóstico Inicial e alguns metadados básicos.
+
+Campos a preencher no JSON (use o idioma português brasileiro de forma técnica e formal):
+{
+  "etp_name": "Um título curto e claro para o novo ETP baseado no objeto do documento (ex: 'Aquisição de Licenças de Software Microsoft')",
+  "diag_problema_necessidade": "Resposta técnica para: Qual é o problema ou necessidade que motiva esta contratação e o que se espera alcançar?",
+  "diag_alternativas_solucao": "Resposta técnica para: Quais alternativas de solução foram consideradas (ou praticadas no documento) e qual foi a escolhida?",
+  "diag_objeto_vigencia": "Resposta técnica para: Qual é o objeto exato e seu prazo/vigência estimado?",
+  "diag_exigencias_padroes": "Resposta técnica para: Quais exigências técnicas, padrões de qualidade ou marcas mínimas são apontadas no documento?",
+  "diag_quantidades_valor": "Resposta técnica para: Quais as quantidades estimadas e o valor total estimado (se constar)?",
+  "diag_parcelamento_providencias": "Resposta técnica para: Como se dará o de parcelamento e quais providências administrativas prévias são necessárias?",
+  "diag_correlatas_ambientais": "Resposta técnica para: Há contratações correlatas/interdependentes envolvidas ou requisitos ambientais/sustentabilidade?",
+  "diag_riscos_sucesso": "Resposta técnica para: Quais são as principais ameaças/riscos identificados no documento antigo para o sucesso da contratação?",
+  "unidade_requisitante": "Nome da área ou unidade requisitante que consta no documento (se houver, caso contrário deixe em branco)",
+  "responsavel": "Nome do responsável ou elaborador (se houver, caso contrário deixe em branco)"
+}
+
+REGRAS CRÍTICAS:
+- O JSON deve ser puro, perfeitamente estruturado e válido.
+- Não inclua markdown de bloco (como \`\`\`json) na resposta, de preferência apenas o JSON bruto como texto. Mas se incluir, vamos limpar.
+- Não inclua introduções, comentários explicativos ou textos fora do JSON.
+- Se o documento omitir informação de alguma pergunta, faça uma análise inferencial lógica baseada no objeto da contratação para responder de forma técnica e adequada, evitando deixar campos vazios.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const text = response.text;
+      if (!text) {
+        throw new Error("A IA não retornou conteúdo.");
+      }
+
+      const jsonCleaned = text.replace(/```json\n?|```/g, '').trim();
+      const extractedData = JSON.parse(jsonCleaned);
+
+      // Initialize state with extracted data
+      const newEtpData: ETPData = {
+        ...INITIAL_STATE,
+        etp_name: extractedData.etp_name || 'Novo Estudo Baseado em Doc Anterior',
+        diag_problema_necessidade: extractedData.diag_problema_necessidade || '',
+        diag_alternativas_solucao: extractedData.diag_alternativas_solucao || '',
+        diag_objeto_vigencia: extractedData.diag_objeto_vigencia || '',
+        diag_exigencias_padroes: extractedData.diag_exigencias_padroes || '',
+        diag_quantidades_valor: extractedData.diag_quantidades_valor || '',
+        diag_parcelamento_providencias: extractedData.diag_parcelamento_providencias || '',
+        diag_correlatas_ambientais: extractedData.diag_correlatas_ambientais || '',
+        diag_riscos_sucesso: extractedData.diag_riscos_sucesso || '',
+        unidade_requisitante: extractedData.unidade_requisitante || '',
+        responsavel: extractedData.responsavel || '',
+      };
+
+      setFormData(newEtpData);
+      lastSavedDataRef.current = JSON.stringify(newEtpData);
+      setCurrentDraftId(null);
+      setIsAdminViewing(false);
+      setActiveTab('diagnostic');
+      setShowAdvanced(false);
+      setView('editor');
+      
+      // Reset modal inputs
+      setShowImportDocModal(false);
+      setPastedDocText('');
+    } catch (err: any) {
+      console.error("Erro ao extrair dados do documento:", err);
+      setExtractError("Erro ao processar o documento: " + (err.message || "Verifique se o texto colado é válido ou tente novamente."));
+    } finally {
+      setIsExtractingDoc(false);
+    }
+  };
+
+  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type === "application/json" || file.name.endsWith(".json")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const text = event.target?.result as string;
+          const parsed = JSON.parse(text);
+          if (parsed && typeof parsed === 'object') {
+            // Check if it's already an ETP backup/JSON
+            if (parsed.diag_problema_necessidade || parsed.etp_name) {
+              setFormData({ ...INITIAL_STATE, ...parsed });
+              lastSavedDataRef.current = JSON.stringify({ ...INITIAL_STATE, ...parsed });
+              setCurrentDraftId(null);
+              setIsAdminViewing(false);
+              setView('editor');
+              setShowImportDocModal(false);
+              return;
+            }
+          }
+          setPastedDocText(text);
+        } catch (err) {
+          setExtractError("Erro ao ler JSON de documento.");
+        }
+      };
+      reader.readAsText(file);
+    } else if (file.type.startsWith("text/") || file.name.endsWith(".txt") || file.name.endsWith(".md")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        setPastedDocText(text);
+      };
+      reader.readAsText(file);
+    } else {
+      setExtractError("Apenas arquivos de texto (.txt, .md) ou JSON de objeto de ETP são suportados diretamente. Para PDFs ou DOCX, abra o arquivo e copie todo o seu texto (Ctrl+A / Ctrl+C) e cole na área de texto abaixo!");
     }
   };
 
@@ -2784,6 +2947,118 @@ export default function App() {
         </div>
       )}
 
+      {showImportDocModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto flex flex-col"
+          >
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shadow-lg shadow-amber-50">
+                  <Icon name="Sparkles" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 leading-tight">Criar ETP por Documento Anterior</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">Inicie rapidamente usando um Termo de Referência ou contrato antigo</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowImportDocModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                disabled={isExtractingDoc}
+              >
+                <Icon name="X" size={20} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4 text-left">
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs text-slate-600 leading-relaxed space-y-2">
+                <p className="font-bold text-slate-700">Como funciona:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>A IA vai analisar o documento fornecido para mapear e responder as <strong>8 perguntas essenciais do Diagnóstico Inicial</strong> de forma adequada.</li>
+                  <li>Você pode carregar um arquivo de texto (<span className="font-mono bg-slate-200 rounded px-1">.txt</span>, <span className="font-mono bg-slate-200 rounded px-1">.md</span>) ou um JSON de backup de ETP.</li>
+                  <li>Para documentos em <strong className="text-indigo-600">PDF ou Word (.docx)</strong>, basta abrir o seu arquivo, copiar todo o texto (<strong className="bg-slate-200 px-1 rounded">Ctrl+A</strong> e <strong className="bg-slate-200 px-1 rounded">Ctrl+C</strong>) e colá-lo na área abaixo!</li>
+                  <li><strong className="text-amber-600">Otimização Automática:</strong> Se o documento for extremamente grande, o sistema irá compactar espaços redundantes e focar a análise de forma inteligente (limite seguro de 32.000 caracteres) para garantir que a requisição seja concluída com sucesso e sem falhas de conexão no navegador.</li>
+                </ul>
+              </div>
+
+              {extractError && (
+                <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-xs text-red-600 font-bold flex items-start gap-2 animate-bounce">
+                  <Icon name="AlertTriangle" size={16} className="shrink-0 mt-0.5" />
+                  <span>{extractError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-2">
+                  Upload de Arquivo (Texto ou JSON de Backup)
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 flex flex-col items-center justify-center px-4 py-6 border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl cursor-pointer bg-slate-50/50 hover:bg-indigo-50/10 transition-all text-center">
+                    <Icon name="ImagePlus" size={24} className="text-slate-400 mb-2" />
+                    <span className="text-xs font-bold text-slate-500">Selecionar arquivo de texto/JSON</span>
+                    <span className="text-[10px] text-slate-400 mt-1">Carrega o conteúdo do arquivo para a área abaixo</span>
+                    <input 
+                      type="file" 
+                      accept=".txt,.md,.json" 
+                      onChange={handleDocFileChange} 
+                      className="hidden" 
+                      disabled={isExtractingDoc}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-2">
+                  Conteúdo do Documento Anterior (Cole aqui)
+                </label>
+                <textarea
+                  value={pastedDocText}
+                  onChange={(e) => setPastedDocText(e.target.value)}
+                  placeholder="Cole aqui todo o conteúdo do seu Termo de Referência antigo, edital ou ETP do qual deseja extrair as bases..."
+                  className="w-full h-64 p-4 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50/50 resize-y font-medium text-slate-700 leading-relaxed"
+                  disabled={isExtractingDoc}
+                />
+                <div className="text-right text-[10px] text-slate-400 font-bold mt-1">
+                  {pastedDocText.length} caracteres colados
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 grid grid-cols-2 gap-3 shrink-0">
+              <button
+                onClick={() => setShowImportDocModal(false)}
+                className="px-6 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors"
+                disabled={isExtractingDoc}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleExtractFromDoc}
+                className="px-6 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+                disabled={isExtractingDoc || pastedDocText.trim().length < 50}
+              >
+                {isExtractingDoc ? (
+                  <>
+                    <Icon name="Loader2" size={16} className="animate-spin" />
+                    Analisando e Extraindo...
+                  </>
+                ) : (
+                  <>
+                    <Icon name="Sparkles" size={16} />
+                    Extrair e Iniciar ETP
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {examplePopup && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div 
@@ -3053,8 +3328,55 @@ export default function App() {
               onClick={createNewETP}
               className="bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex-1 sm:flex-none justify-center"
             >
-              <Icon name="PlusCircle" size={18} /> <span className="hidden sm:inline">Novo ETP</span><span className="sm:hidden">Novo</span>
+              <Icon name="PlusCircle" size={18} /> <span className="hidden sm:inline">Novo ETP Blank</span><span className="sm:hidden">Em Branco</span>
             </button>
+            {isMaster ? (
+              <button 
+                onClick={() => {
+                  setExtractError(null);
+                  setPastedDocText('');
+                  setShowImportDocModal(true);
+                }}
+                className="bg-amber-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-amber-700 transition-all shadow-lg shadow-amber-200 flex-1 sm:flex-none justify-center animate-pulse-slow"
+              >
+                <Icon name="Sparkles" size={18} /> <span className="hidden sm:inline">Novo ETP via Doc Anterior</span><span className="sm:hidden">Baseado em TR/ETP</span>
+              </button>
+            ) : (
+              <button 
+                onMouseEnter={() => setIsHoveredDocBtn(true)}
+                onMouseLeave={() => setIsHoveredDocBtn(false)}
+                className={`relative px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-300 overflow-hidden flex-1 sm:flex-none ${
+                  isHoveredDocBtn 
+                    ? 'bg-slate-800 text-slate-100 shadow-md cursor-not-allowed scale-[0.98]' 
+                    : 'bg-slate-200 text-slate-400/80 opacity-60 cursor-not-allowed border border-slate-300/30'
+                }`}
+                title="Em desenvolvimento - Permitido apenas para Usuário Master"
+              >
+                {/* Spacer invisivel para travar a largura e proporcao originais */}
+                <div className="flex items-center gap-2 opacity-0 pointer-events-none select-none">
+                  <Icon name="Sparkles" size={18} />
+                  <span className="hidden sm:inline">Novo ETP via Doc Anterior</span>
+                  <span className="sm:hidden">Baseado em TR/ETP</span>
+                </div>
+
+                {/* Conteudo normal centralizado */}
+                <div className={`absolute inset-0 flex items-center justify-center gap-2 transition-all duration-300 ${
+                  isHoveredDocBtn ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+                }`}>
+                  <Icon name="Sparkles" size={18} />
+                  <span className="hidden sm:inline">Novo ETP via Doc Anterior</span>
+                  <span className="sm:hidden">Baseado em TR/ETP</span>
+                </div>
+
+                {/* Conteudo hover 'Em desenvolvimento' centralizado */}
+                <div className={`absolute inset-0 flex items-center justify-center gap-2 transition-all duration-300 ${
+                  isHoveredDocBtn ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                }`}>
+                  <Icon name="Lock" size={15} className="text-amber-500 shrink-0" />
+                  <span className="font-black text-slate-200 text-[10px] sm:text-[11px] uppercase tracking-wider">Em desenvolvimento</span>
+                </div>
+              </button>
+            )}
           </div>
         </div>
 
