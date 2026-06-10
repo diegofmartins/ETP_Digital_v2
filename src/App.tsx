@@ -1851,7 +1851,7 @@ REGRAS CRÍTICAS:
       - Se as informações forem insuficientes para um texto técnico completo, você DEVE iniciar a resposta com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ] indicando o que falta.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3.5-flash",
         contents: [{ parts: [{ text: prompt }] }],
         config: {
           systemInstruction: SYSTEM_PROMPT,
@@ -1904,12 +1904,6 @@ REGRAS CRÍTICAS:
     try {
       const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
       
-      const filledFields = Object.keys(formData).filter(key => key !== '_version' && !!formData[key as keyof ETPData] && String(formData[key as keyof ETPData]).length > 0);
-      const emptyFields = structure
-        .filter(item => item.isAiEnabled !== false && item.section !== '0. DIAGNÓSTICO INICIAL')
-        .filter(item => !formData[item.id as keyof ETPData] || String(formData[item.id as keyof ETPData]).length === 0)
-        .map(item => item.id);
-
       const diagnosticInfo = `
       - Problema/Necessidade: ${formData.diag_problema_necessidade}
       - Alternativas: ${formData.diag_alternativas_solucao}
@@ -1921,70 +1915,165 @@ REGRAS CRÍTICAS:
       - Riscos: ${formData.diag_riscos_sucesso}
       `;
 
+      const fieldsGroup1 = [
+        "justificativa_necessidade",
+        "levantamento_mercado",
+        "objeto_sucinto",
+        "especificacoes_tecnicas",
+        "descricao_solucao_integral",
+        "requisitos_header",
+        "requisitos_exigencias",
+        "requisitos_qualidade",
+        "requisitos_marca"
+      ];
+
+      const fieldsGroup2 = [
+        "requisitos_continuos",
+        "requisitos_amostra",
+        "requisitos_transicao",
+        "garantia_contratual",
+        "garantia_tecnica",
+        "assistencia_tecnica",
+        "requisitos_vistoria",
+        "requisitos_subcontratacao",
+        "requisitos_execucao",
+        "requisitos_dimensionamento"
+      ];
+
+      const fieldsGroup3 = [
+        "estimativa_quantidades_texto",
+        "estimativa_valor_texto",
+        "tabela_estimativa_quantitativos_precos",
+        "justificativa_parcelamento",
+        "resultados_pretendidos",
+        "providencias_adm",
+        "contratacoes_correlatas",
+        "impactos_ambientais",
+        "alinhamento_planejamento",
+        "posicionamento_conclusivo",
+        "analise_riscos_resumo",
+        "tabela_riscos_interna",
+        "tabela_riscos_externa"
+      ];
+
       const tableInstructions = `
-      Para os campos de tabela abaixo, você DEVE gerar HTML seguindo estes modelos:
+      Para os campos de tabela, você DEVE obrigatoriamente gerar HTML de tabela bonito, profissional, moderno e responsivo seguindo estes modelos exatos:
       - tabela_estimativa_quantitativos_precos: ${TABLE_TEMPLATES.quantitativos}
       - tabela_riscos_interna: ${TABLE_TEMPLATES.riscos('INTERNA')}
       - tabela_riscos_externa: ${TABLE_TEMPLATES.riscos('EXTERNA')}
       `;
 
-      const prompt = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba. 
-      Sua missão é garantir que o ETP seja um documento COESO, sem repetições e com textos diretos.
-      
-      ${fillEmpty ? `Complete TODOS os campos técnicos do ETP com base nos dados do DIAGNÓSTICO INICIAL fornecidos. 
-      Os campos que você DEVE preencher são: ${emptyFields.join(', ')}.` : 'Revise e refine APENAS os campos que já possuem conteúdo. NÃO preencha campos que estão vazios.'}
+      const prompt1 = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba.
+      Sua missão é gerar o conteúdo completo do Estudo Técnico Preliminar (ETP) com base nas respostas do DIAGNÓSTICO INICIAL fornecidas.
       
       DIAGNÓSTICO INICIAL:
       ${diagnosticInfo}
       
-      CONTEÚDO ATUAL (Para referência e revisão):
-      ${filledFields.map(f => `- ${f}: ${formData[f as keyof ETPData]}`).join('\n')}
-
+      Você DEVE gerar conteúdo técnico substancial, formal, completo, detalhado e coerente para os seguintes campos técnicos de texto:
+      ${fieldsGroup1.map(f => `- ${f}`).join('\n')}
+      
       INSTRUÇÕES DE COESÃO E QUALIDADE:
-      - Garanta que os textos de cada campo se complementem sem repetir as mesmas informações ou frases prontas.
-      - Se um campo já possui conteúdo, melhore a redação para que ele se conecte logicamente com os demais.
-      - Mantenha os textos CURTOS, TÉCNICOS e focados no que é essencial para cada seção.
-      - O "Planejamento Estratégico 2022-2031" deve ser citado APENAS na seção de Alinhamento ao Planejamento.
-      - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo, inicie o texto desse campo com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
+      - Garanta que os textos se complementem perfeitamente.
+      - Mantenha os textos objetivos, técnicos, formais e focados nas necessidades do município de Curitiba.
+      - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo, inicie o texto de rascunho desse campo com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
+      
+      Retorne obrigatoriamente um JSON puro contendo exatamente as chaves do grupo (com textos gerados):
+      ${JSON.stringify(fieldsGroup1)}
+      
+      REGRAS CRÍTICAS: NÃO use markdown (#, *, **). NÃO inclua introduções, comentários ou explicações fora do JSON.`;
+
+      const prompt2 = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba.
+      Sua missão é gerar o conteúdo completo do Estudo Técnico Preliminar (ETP) com base nas respostas do DIAGNÓSTICO INICIAL fornecidas.
+      
+      DIAGNÓSTICO INICIAL:
+      ${diagnosticInfo}
+      
+      Você DEVE gerar conteúdo técnico substancial, formal, completo, detalhado e coerente para os seguintes campos técnicos de texto:
+      ${fieldsGroup2.map(f => `- ${f}`).join('\n')}
+      
+      INSTRUÇÕES DE COESÃO E QUALIDADE:
+      - Garanta que os textos se complementem perfeitamente.
+      - Mantenha os textos objetivos, técnicos, formais e focados.
+      - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo, inicie o texto de rascunho desse campo com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
+      
+      Retorne obrigatoriamente um JSON puro contendo exatamente as chaves do grupo (com textos gerados):
+      ${JSON.stringify(fieldsGroup2)}
+      
+      REGRAS CRÍTICAS: NÃO use markdown (#, *, **). NÃO inclua introduções, comentários ou explicações fora do JSON.`;
+
+      const prompt3 = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba.
+      Sua missão é gerar o conteúdo completo do Estudo Técnico Preliminar (ETP) com base nas respostas do DIAGNÓSTICO INICIAL fornecidas.
+      
+      DIAGNÓSTICO INICIAL:
+      ${diagnosticInfo}
+      
+      Você DEVE gerar conteúdo técnico substancial, formal, completo e detalhado para as seguintes chaves de texto e tabelas:
+      ${fieldsGroup3.map(f => `- ${f}`).join('\n')}
+      
       ${tableInstructions}
       
-      Retorne obrigatoriamente um JSON puro com os campos processados. 
-      ${!fillEmpty ? 'No JSON de retorno, inclua APENAS os campos que já estavam preenchidos.' : 'No JSON de retorno, inclua TODOS os campos solicitados, especialmente os que estavam vazios.'}
-      REGRAS CRÍTICAS: NÃO use markdown (#, *, **). NÃO inclua introduções ou comentários nos campos. NÃO inclua o nome do campo ou títulos dentro do conteúdo de cada campo. Retorne APENAS o texto final para cada campo (ou HTML da tabela se aplicável).`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json"
-        }
-      });
-
-      const resultText = response.text;
-      console.log("AI Raw Response:", resultText);
+      INSTRUÇÕES DE COESÃO E QUALIDADE:
+      - Mantenha os textos objetivos, técnicos, formais e focados.
+      - O "Planejamento Estratégico 2022-2031" deve ser citado APENAS na seção de Alinhamento ao Planejamento.
+      - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo de texto, inicie o texto dele com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
       
-      if (resultText) {
-        try {
-          // Clean JSON tags if present
-          const jsonCleaned = resultText.replace(/```json\n?|```/g, '').trim();
-          const generatedData = JSON.parse(jsonCleaned);
-          console.log("AI Parsed Data:", generatedData);
-          
-          if (Object.keys(generatedData).length === 0) {
-            throw new Error("A IA retornou um objeto vazio. Tente fornecer mais detalhes no Diagnóstico Inicial.");
+      Retorne obrigatoriamente um JSON puro contendo exatamente as chaves do grupo (com textos ou HTML das tabelas gerados):
+      ${JSON.stringify(fieldsGroup3)}
+      
+      REGRAS CRÍTICAS: NÃO use markdown (#, *, **) para formatar o texto dos campos. NÃO inclua introduções, comentários ou explicações fora do JSON.`;
+
+      const [response1, response2, response3] = await Promise.all([
+        ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: [{ parts: [{ text: prompt1 }] }],
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            responseMimeType: "application/json"
           }
-          
-          setFormData(prev => ({ ...prev, ...generatedData }));
-          setShowAdvanced(true);
-          setActiveTab('technical');
-        } catch (parseErr: any) {
-          console.error("Erro ao processar JSON da IA:", parseErr, resultText);
-          throw new Error("A IA retornou um formato inválido. Tente novamente. Detalhe: " + parseErr.message);
+        }),
+        ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: [{ parts: [{ text: prompt2 }] }],
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            responseMimeType: "application/json"
+          }
+        }),
+        ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: [{ parts: [{ text: prompt3 }] }],
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            responseMimeType: "application/json"
+          }
+        })
+      ]);
+
+      const parseJson = (text: string | undefined, groupName: string) => {
+        if (!text) throw new Error(`A IA não retornou resposta para o ${groupName}.`);
+        try {
+          const jsonCleaned = text.replace(/```json\n?|```/g, '').trim();
+          return JSON.parse(jsonCleaned);
+        } catch (e: any) {
+          console.error(`Erro ao analisar JSON para ${groupName}:`, text, e);
+          throw new Error(`Erro ao analisar resposta da IA para o ${groupName}.`);
         }
-      } else {
-        throw new Error("A IA não retornou nenhum conteúdo.");
+      };
+
+      const data1 = parseJson(response1.text, "Grupo 1 (Demanda e Solução)");
+      const data2 = parseJson(response2.text, "Grupo 2 (Requisitos e Execução)");
+      const data3 = parseJson(response3.text, "Grupo 3 (Estimativas e Riscos)");
+
+      const combinedData = { ...data1, ...data2, ...data3 };
+      console.log("Combined AI Generated Data:", combinedData);
+
+      if (Object.keys(combinedData).length === 0) {
+        throw new Error("A IA retornou um estudo vazio. Tente fornecer mais detalhes no Diagnóstico Inicial.");
       }
+
+      setFormData(prev => ({ ...prev, ...combinedData }));
+      setShowAdvanced(true);
+      setActiveTab('technical');
     } catch (err: any) {
       console.error("Erro Global Generate:", err);
       setApiError(err.message || "Erro na geração global. Tente preencher os campos básicos primeiro.");
@@ -2518,46 +2607,6 @@ REGRAS CRÍTICAS:
 
   const Modals = () => (
     <AnimatePresence>
-      {showGlobalConfirm && (
-        <div key="modal-confirm-overlay" className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <motion.div 
-            key="global-confirm-content"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-200"
-          >
-            <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
-              <Icon name="Sparkles" size={32} />
-            </div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">Assistente de Geração Completa</h3>
-            <p className="text-slate-500 text-sm leading-relaxed mb-8">
-              Deseja que a IA sugira o texto para todos os campos técnicos que ainda estão em branco? Isso criará uma primeira versão completa do seu ETP.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={() => handleGlobalGenerate(true)}
-                className="w-full px-6 py-4 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
-              >
-                <Icon name="Wand2" size={16} /> Sim, Sugerir Texto para Campos Vazios
-              </button>
-              <button 
-                onClick={() => handleGlobalGenerate(false)}
-                className="w-full px-6 py-4 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
-              >
-                <Icon name="Edit3" size={16} /> Não, Apenas Refinar Textos Existentes
-              </button>
-              <button 
-                onClick={() => setShowGlobalConfirm(false)}
-                className="w-full px-6 py-3 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
       {reassignState && (
         <div key="modal-reassign-overlay" className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <motion.div 
@@ -3350,7 +3399,7 @@ REGRAS CRÍTICAS:
               onClick={createNewETP}
               className="bg-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex-1 sm:flex-none justify-center"
             >
-              <Icon name="PlusCircle" size={18} /> <span className="hidden sm:inline">Novo ETP Blank</span><span className="sm:hidden">Em Branco</span>
+              <Icon name="PlusCircle" size={18} /> <span className="hidden sm:inline">Novo ETP</span><span className="sm:hidden">Em Branco</span>
             </button>
             {isMaster ? (
               <button 
@@ -4201,7 +4250,7 @@ REGRAS CRÍTICAS:
                   {!sidebarCollapsed && (
                     <div className="p-4 border-t border-slate-100 bg-slate-50/50">
                       <button 
-                        onClick={() => setShowGlobalConfirm(true)}
+                        onClick={() => handleGlobalGenerate()}
                         disabled={!isMandatoryFilled() || !!isGenerating || isReadOnly}
                         className={`w-full py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 ${isMandatoryFilled() && !isReadOnly ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                       >
@@ -4317,8 +4366,9 @@ REGRAS CRÍTICAS:
                           <motion.button 
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            onClick={() => setShowGlobalConfirm(true)}
-                            className="bg-indigo-600 text-white px-10 py-5 rounded-[32px] font-black uppercase tracking-widest text-sm hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-200 flex items-center gap-4 group"
+                            onClick={() => handleGlobalGenerate()}
+                            disabled={!!isGenerating || isReadOnly}
+                            className={`px-10 py-5 rounded-[32px] font-black uppercase tracking-widest text-sm transition-all flex items-center gap-4 group ${!!isGenerating || isReadOnly ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-2xl shadow-indigo-200'}`}
                           >
                             <div className="bg-white/20 p-2 rounded-xl group-hover:rotate-12 transition-transform">
                               <Icon name="Sparkles" size={24} />
@@ -4451,7 +4501,7 @@ REGRAS CRÍTICAS:
 
                     <div className="flex justify-center py-8">
                       <button 
-                        onClick={() => setShowGlobalConfirm(true)}
+                        onClick={() => handleGlobalGenerate()}
                         disabled={!!isGenerating || isReadOnly}
                         className={`bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl flex items-center gap-3 ${isReadOnly ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' : 'hover:bg-indigo-700 shadow-indigo-200'}`}
                       >
