@@ -1830,11 +1830,11 @@ REGRAS CRÍTICAS:
 
       let tableInstruction = '';
       if (fieldId === 'tabela_estimativa_quantitativos_precos') {
-        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para os quantitativos e precos seguindo este modelo:\n${TABLE_TEMPLATES.quantitativos}`;
+        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para os quantitativos e precos seguindo este modelo de aspas simples:\n${TABLE_TEMPLATES.quantitativos.replace(/"/g, "'")}`;
       } else if (fieldId === 'tabela_riscos_interna') {
-        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase INTERNA seguindo este modelo:\n${TABLE_TEMPLATES.riscos('INTERNA')}`;
+        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase INTERNA seguindo este modelo de aspas simples:\n${TABLE_TEMPLATES.riscos('INTERNA').replace(/"/g, "'")}`;
       } else if (fieldId === 'tabela_riscos_externa') {
-        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase EXTERNA seguindo este modelo:\n${TABLE_TEMPLATES.riscos('EXTERNA')}`;
+        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase EXTERNA seguindo este modelo de aspas simples:\n${TABLE_TEMPLATES.riscos('EXTERNA').replace(/"/g, "'")}`;
       }
 
       const prompt = `Com base no DIAGNÓSTICO INICIAL abaixo:
@@ -1957,10 +1957,13 @@ REGRAS CRÍTICAS:
       ];
 
       const tableInstructions = `
-      Para os campos de tabela, você DEVE obrigatoriamente gerar HTML de tabela bonito, profissional, moderno e responsivo seguindo estes modelos exatos:
-      - tabela_estimativa_quantitativos_precos: ${TABLE_TEMPLATES.quantitativos}
-      - tabela_riscos_interna: ${TABLE_TEMPLATES.riscos('INTERNA')}
-      - tabela_riscos_externa: ${TABLE_TEMPLATES.riscos('EXTERNA')}
+      Para os campos de tabela, você DEVE obrigatoriamente gerar HTML de tabela bonito, profissional, moderno e responsivo seguindo estes modelos exatos.
+      ATENÇÃO EXTREMA: Em todo o código HTML das tabelas geradas, você DEVE usar OBRIGATORIAMENTE apenas aspas simples (') para delimitar atributos HTML (exemplo: style='...', colspan='...', border='...'). NÃO use aspas duplas (") sob nenhuma circunstância dentro das strings HTML, caso contrário o JSON será corrompido!
+      
+      Modelos de tabelas (com aspas simples):
+      - tabela_estimativa_quantitativos_precos: ${TABLE_TEMPLATES.quantitativos.replace(/"/g, "'")}
+      - tabela_riscos_interna: ${TABLE_TEMPLATES.riscos('INTERNA').replace(/"/g, "'")}
+      - tabela_riscos_externa: ${TABLE_TEMPLATES.riscos('EXTERNA').replace(/"/g, "'")}
       `;
 
       const prompt1 = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba.
@@ -2020,7 +2023,10 @@ REGRAS CRÍTICAS:
       Retorne obrigatoriamente um JSON puro contendo exatamente as chaves do grupo (com textos ou HTML das tabelas gerados):
       ${JSON.stringify(fieldsGroup3)}
       
-      REGRAS CRÍTICAS: NÃO use markdown (#, *, **) para formatar o texto dos campos. NÃO inclua introduções, comentários ou explicações fora do JSON.`;
+      REGRAS CRÍTICAS DE SINTAXE: 
+      1. NÃO use markdown (#, *, **) para formatar o texto dos campos. 
+      2. NÃO inclua introduções, comentários ou explicações fora do JSON.
+      3. Use APENAS aspas simples (') para todos os atributos das marcações HTML das tabelas (como style='...', colspan='...', border='...'). NÃO use aspas duplas (") dentro das tabelas, sob pena de gerar uma resposta JSON inválida e corrompida.`;
 
       const [response1, response2, response3] = await Promise.all([
         ai.models.generateContent({
