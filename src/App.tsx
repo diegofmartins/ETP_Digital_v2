@@ -611,7 +611,12 @@ export default function App() {
       return viteKey.trim();
     }
 
-    const processKey = process.env.GEMINI_API_KEY;
+    let processKey = undefined;
+    try {
+      processKey = typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : undefined;
+    } catch (e) {
+      // safe fallback if process is not defined
+    }
     if (processKey && processKey.trim().length > 10) {
       return processKey.trim();
     }
