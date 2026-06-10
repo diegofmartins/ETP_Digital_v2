@@ -582,7 +582,7 @@ export default function App() {
   const lastSavedDataRef = useRef<string>('');
   const [view, setView] = useState<'dashboard' | 'editor' | 'admin'>('dashboard');
   const [adminTab, setAdminTab] = useState<'etps' | 'users' | 'trash' | 'settings'>('users');
-  const [systemSettings, setSystemSettings] = useState<{ chatWebhookUrl?: string }>({});
+  const [systemSettings, setSystemSettings] = useState<{ chatWebhookUrl?: string, geminiApiKey?: string }>({});
   
   const [formData, setFormData] = useState<ETPData>(INITIAL_STATE);
   const [isGenerating, setIsGenerating] = useState<ETPField | 'global' | null>(null);
@@ -598,6 +598,28 @@ export default function App() {
     window.addEventListener('firestore-quota-exceeded', handleQuotaError);
     return () => window.removeEventListener('firestore-quota-exceeded', handleQuotaError);
   }, []);
+
+  const getGeminiApiKey = (): string => {
+    const settingsKey = systemSettings?.geminiApiKey;
+    if (settingsKey && settingsKey.trim().length > 10) {
+      return settingsKey.trim();
+    }
+    
+    // Fallback block standard environment vars
+    const viteKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (viteKey && viteKey.trim().length > 10) {
+      return viteKey.trim();
+    }
+
+    const processKey = process.env.GEMINI_API_KEY;
+    if (processKey && processKey.trim().length > 10) {
+      return processKey.trim();
+    }
+
+    throw new Error(
+      "Chave de API do Gemini não configurada! Para utilizar as funções de IA fora do ambiente de desenvolvimento (como na versão live do GitHub), um usuário Master deve entrar no painel Administrador > Configurações e salvar a Chave de API do Gemini da organização."
+    );
+  };
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -1656,7 +1678,7 @@ export default function App() {
       console.log(`[Document Extraction] Compacted payload: ${originalLength} chars -> ${condensed.length} chars (Truncated: ${isTruncated})`);
 
       const ai = new GoogleGenAI({ 
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey: getGeminiApiKey(),
         httpOptions: {
           headers: {
             'User-Agent': 'aistudio-build'
@@ -1794,7 +1816,7 @@ REGRAS CRÍTICAS:
     const fieldName = field?.label;
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
       const diagnosticInfo = `
       - Problema/Necessidade: ${formData.diag_problema_necessidade}
       - Alternativas: ${formData.diag_alternativas_solucao}
@@ -1880,7 +1902,7 @@ REGRAS CRÍTICAS:
     setIsGenerating('global');
     setShowGlobalConfirm(false);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
       
       const filledFields = Object.keys(formData).filter(key => key !== '_version' && !!formData[key as keyof ETPData] && String(formData[key as keyof ETPData]).length > 0);
       const emptyFields = structure
@@ -3829,6 +3851,27 @@ REGRAS CRÍTICAS:
             </div>
             <p className="mt-2 text-[10px] text-slate-400 font-medium ml-1">
               Esta URL será usada para enviar notificações de novos registros e ETPs criados.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+              Chave de API do Gemini (AI)
+            </label>
+            <div className="relative">
+              <input 
+                type="password"
+                value={systemSettings.geminiApiKey || ''}
+                onChange={(e) => setSystemSettings(prev => ({ ...prev, geminiApiKey: e.target.value }))}
+                placeholder="AIzaSy..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all outline-none font-mono"
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                <Icon name="Key" size={18} />
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-slate-400 font-medium ml-1">
+              Chave usada para as funções de inteligência artificial (assistente de escrita, polimento e extração de documentos) na versão hospedada/produção (ex: GitHub).
             </p>
           </div>
 
