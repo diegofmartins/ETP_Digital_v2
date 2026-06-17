@@ -11,7 +11,7 @@ import { ETPData, ETPField, ETPStructureItem, ETPExample } from "./types";
 import { notifyNewUserRegistration, notifyUserApproved, notifyNewETPCreated, sendGoogleChatNotification } from "./services/notificationService";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType, ImageRun } from "docx";
 import { saveAs } from "file-saver";
-import JoditEditor from 'jodit-react';
+import { HtmlTableEditor } from "./components/HtmlTableEditor";
 
 import { auth, db, googleProvider, OperationType, handleFirestoreError } from "./firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser, browserPopupRedirectResolver } from "firebase/auth";
@@ -4406,27 +4406,13 @@ export default function App() {
                         </div>
                         <div className="p-6">
                           {['tabela_estimativa_quantitativos_precos', 'tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) ? (
-                            <div className={`border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-opacity ${(['tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) && !formData[item.id === 'tabela_riscos_interna' ? 'include_riscos_interna' : 'include_riscos_externa']) ? 'opacity-50' : 'opacity-100'}`}>
-                              <JoditEditor 
+                            <div className={`transition-opacity ${(['tabela_riscos_interna', 'tabela_riscos_externa'].includes(item.id) && !formData[item.id === 'tabela_riscos_interna' ? 'include_riscos_interna' : 'include_riscos_externa']) ? 'opacity-50' : 'opacity-100'}`}>
+                              <HtmlTableEditor 
                                 value={String((formData && formData[item.id]) || '')} 
-                                config={{
-                                  readonly: isReadOnly,
-                                  toolbarAdaptive: false,
-                                  buttons: [
-                                    'table', '|',
-                                    'bold', 'italic', 'underline', '|',
-                                    'align', 'list', '|',
-                                    'undo', 'redo', '|',
-                                    'fullsize', 'source'
-                                  ],
-                                  height: 400,
-                                  placeholder: 'Utilize a ferramenta de tabela acima para compor os dados...',
-                                  language: 'pt_br',
-                                  askBeforePasteHTML: false,
-                                  askBeforePasteFromWord: false,
-                                  defaultActionOnPaste: 'insert_clear_html',
-                                }}
-                                onBlur={(newContent) => setFormData(prev => ({...prev, [item.id]: newContent}))} 
+                                onChange={(newContent) => setFormData(prev => ({...prev, [item.id]: newContent}))} 
+                                placeholder="Utilize a barra de ferramentas para compor a tabela ou clique em 'Tabela Modelo' para restaurar um escopo padrão..."
+                                fieldId={item.id}
+                                readOnly={isReadOnly}
                               />
                             </div>
                           ) : item.id === 'fotos' ? (
