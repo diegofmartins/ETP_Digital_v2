@@ -397,6 +397,61 @@ const structure: ETPStructureItem[] = [
   },
 ];
 
+const getMillis = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val.seconds === 'number') return val.seconds * 1000;
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const parsed = Date.parse(val);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
+const getSafeDateString = (timestamp: any): string => {
+  if (!timestamp) return '';
+  if (typeof timestamp.toDate === 'function') {
+    return timestamp.toDate().toLocaleDateString('pt-BR');
+  }
+  if (timestamp instanceof Date) {
+    return timestamp.toLocaleDateString('pt-BR');
+  }
+  if (typeof timestamp === 'number') {
+    return new Date(timestamp).toLocaleDateString('pt-BR');
+  }
+  if (typeof timestamp === 'string') {
+    const parsed = Date.parse(timestamp);
+    if (!isNaN(parsed)) {
+      return new Date(parsed).toLocaleDateString('pt-BR');
+    }
+    return timestamp;
+  }
+  return '';
+};
+
+const getSafeTimeString = (timestamp: any): string => {
+  if (!timestamp) return '';
+  if (typeof timestamp.toDate === 'function') {
+    return timestamp.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (timestamp instanceof Date) {
+    return timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (typeof timestamp === 'number') {
+    return new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (typeof timestamp === 'string') {
+    const parsed = Date.parse(timestamp);
+    if (!isNaN(parsed)) {
+      return new Date(parsed).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+  }
+  return '';
+};
+
 const IconMap: Record<string, any> = {
   FileText, ClipboardList, Target, CheckCircle, Sparkles, Loader2, Printer, 
   Layout, BarChart, ShieldCheck, Leaf, Settings, Zap, Wand2, Eye, Edit3, 
@@ -745,7 +800,7 @@ export default function App() {
         const existing = emailMap.get(email);
         if (u.status === 'approved' && existing.status !== 'approved') {
           emailMap.set(email, u);
-        } else if (u.lastActive?.toMillis() > (existing.lastActive?.toMillis() || 0)) {
+        } else if (getMillis(u.lastActive) > getMillis(existing.lastActive)) {
           emailMap.set(email, u);
         }
       }
@@ -1490,7 +1545,7 @@ export default function App() {
           const best = group.sort((a, b) => {
             if (a.status === 'approved' && b.status !== 'approved') return -1;
             if (b.status === 'approved' && a.status !== 'approved') return 1;
-            return (b.lastActive?.toMillis() || 0) - (a.lastActive?.toMillis() || 0);
+            return getMillis(b.lastActive) - getMillis(a.lastActive);
           })[0];
 
           // Merge data and delete others
@@ -3549,9 +3604,9 @@ export default function App() {
                   </td>
                   <td className="px-3 sm:px-6 py-4">
                     <div className="text-[11px] sm:text-sm text-slate-600 whitespace-nowrap">
-                      {draft.updatedAt?.toDate().toLocaleDateString('pt-BR')}
+                      {getSafeDateString(draft.updatedAt)}
                       <span className="hidden sm:inline ml-2 text-[10px] text-slate-400">
-                        {draft.updatedAt?.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        {getSafeTimeString(draft.updatedAt)}
                       </span>
                     </div>
                   </td>
@@ -3909,7 +3964,7 @@ export default function App() {
                 </tr>
               ) : (
                 sortedTrash.map(draft => {
-                  const deletedAt = draft.deletedAt?.toDate().getTime() || 0;
+                  const deletedAt = getMillis(draft.deletedAt);
                   const timeLeft = Math.max(0, 72 * 60 * 60 * 1000 - (Date.now() - deletedAt));
                   const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
                   const minsLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
