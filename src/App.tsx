@@ -1,5 +1,4 @@
 import { useState, useEffect, Fragment, useMemo, useRef } from 'react';
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   FileText, ClipboardList, Target, CheckCircle, Sparkles, Loader2, Printer, 
@@ -411,8 +410,51 @@ const Icon = ({ name, size = 16, className = "" }: { name: string, size?: number
   return <LucideIcon size={size} className={className} />;
 };
 
+const compressImage = (file: File, maxWidth = 800, maxHeight = 800, quality = 0.65): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
 const FileUploader = ({ value, onChange, readOnly = false }: { value: string, onChange: (value: string) => void, readOnly?: boolean }) => {
   const [images, setImages] = useState<string[]>([]);
+  const [isCompresing, setIsCompressing] = useState(false);
 
   useEffect(() => {
     if (value) {
@@ -426,20 +468,23 @@ const FileUploader = ({ value, onChange, readOnly = false }: { value: string, on
     }
   }, [value]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        const newImages = [...images, base64String];
-        setImages(newImages);
-        onChange(JSON.stringify(newImages));
-      };
-      reader.readAsDataURL(file);
-    });
+    setIsCompressing(true);
+    try {
+      const compressionPromises = Array.from(files).map(file => compressImage(file));
+      const compressedBase64s = await Promise.all(compressionPromises);
+      
+      const newImages = [...images, ...compressedBase64s].slice(0, 8);
+      setImages(newImages);
+      onChange(JSON.stringify(newImages));
+    } catch (err) {
+      console.error("Erro ao comprimir imagens:", err);
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const removeImage = (index: number) => {
@@ -466,13 +511,23 @@ const FileUploader = ({ value, onChange, readOnly = false }: { value: string, on
         ))}
         {!readOnly && (
           <label className="w-32 h-32 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all text-slate-400 hover:text-indigo-600">
-            <Icon name="ImagePlus" size={24} />
-            <span className="text-[10px] font-bold mt-2 uppercase">Adicionar Foto</span>
-            <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileChange} />
+            {isCompresing ? (
+              <Loader2 size={24} className="animate-spin text-indigo-600" />
+            ) : (
+              <Icon name="ImagePlus" size={24} />
+            )}
+            <span className="text-[10px] font-bold mt-2 uppercase">
+              {isCompresing ? "Processando..." : "Adicionar Foto"}
+            </span>
+            <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileChange} disabled={isCompresing} />
           </label>
         )}
       </div>
-      {!readOnly && <p className="text-[10px] text-slate-400 italic">Formatos aceitos: JPG, PNG. Máximo 1MB por imagem.</p>}
+      {!readOnly && (
+        <p className="text-[10px] text-slate-400 italic">
+          As fotos são comprimidas de forma inteligente para economizar espaço de armazenamento. Máximo 8 imagens por ETP.
+        </p>
+      )}
     </div>
   );
 };
@@ -1147,6 +1202,18 @@ export default function App() {
         updatedAt: serverTimestamp()
       };
 
+      // Check document size before saving to prevent Firestore write error.
+      // Firestore document size limit is exactly 1,048,576 bytes (1MB).
+      const tempDraftData = { ...draftData, updatedAt: new Date().toISOString() };
+      const estimatedSize = new Blob([JSON.stringify(tempDraftData)]).size;
+      const MAX_SIZE = 1048576; // 1MB
+      
+      if (estimatedSize > MAX_SIZE) {
+        setApiError(`Aviso de Limite de Espaço: O tamanho do estudo (${(estimatedSize / 1024 / 1024).toFixed(2)} MB) excede o limite máximo permitido de 1.00 MB. Remova algumas fotos anexadas ou remova imagens de alta resolução coladas nos campos de texto para que possamos salvar o rascunho com sucesso.`);
+        setIsSaving(false);
+        return;
+      }
+
       if (currentDraftId) {
         await updateDoc(doc(db, 'etps', currentDraftId), draftData);
       } else {
@@ -1161,12 +1228,15 @@ export default function App() {
       }
       
       lastSavedDataRef.current = currentDataStr;
-      
-      if (manual) {
-        // Show success message or something
-      }
+      setApiError(null); // Clear errors upon successful save
     } catch (err: any) {
       handleFirestoreError(err, OperationType.WRITE, 'etps');
+      const errStr = String(err?.message || err).toLowerCase();
+      if (errStr.includes('exceeds the maximum allowed size') || errStr.includes('too large') || errStr.includes('limit')) {
+        setApiError("Ocorreu um erro ao salvar: O tamanho do estudo excede o limite do banco de dados (1MB). Reduza o tamanho ou quantidade das imagens inseridas.");
+      } else {
+        setApiError(`Erro ao salvar rascunho: ${err?.message || 'Verifique sua conexão ou permissões.'}`);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -1593,144 +1663,118 @@ export default function App() {
     try {
       // Import Users
       let userCount = 0;
-        if (backupToImport.users && Array.isArray(backupToImport.users)) {
-          const totalUsers = backupToImport.users.length;
-          for (let i = 0; i < totalUsers; i++) {
-            const u = backupToImport.users[i];
-            setImportProgress({ current: i + 1, total: totalUsers, type: 'Usuários' });
+      if (backupToImport.users && Array.isArray(backupToImport.users)) {
+        const totalUsers = backupToImport.users.length;
+        for (let i = 0; i < totalUsers; i++) {
+          const u = backupToImport.users[i];
+          setImportProgress({ current: i + 1, total: totalUsers, type: 'Usuários' });
+          
+          const targetUid = u.uid || u.id;
+          if (targetUid) {
+            const cleanUserData = { 
+              ...u,
+              uid: targetUid // Ensure uid is present in the document data
+            };
+            // Remove 'id' if it exists as a top-level field from old backups
+            if ('id' in cleanUserData) delete (cleanUserData as any).id;
             
-            const targetUid = u.uid || u.id;
-            if (targetUid) {
-              const cleanUserData = { 
-                ...u,
-                uid: targetUid // Ensure uid is present in the document data
-              };
-              // Remove 'id' if it exists as a top-level field from old backups
-              if ('id' in cleanUserData) delete (cleanUserData as any).id;
-              
-              if (cleanUserData.lastActive) cleanUserData.lastActive = serverTimestamp();
-              if (cleanUserData.createdAt) cleanUserData.createdAt = serverTimestamp();
-              
-              try {
-                await setDoc(doc(db, 'users', targetUid), cleanUserData);
-                userCount++;
-              } catch (e: any) {
-                console.error(`Erro ao importar usuário ${targetUid}:`, e);
-                throw new Error(`Falha no usuário ${cleanUserData.email || targetUid}: ${e.message}`);
-              }
+            if (cleanUserData.lastActive) cleanUserData.lastActive = serverTimestamp();
+            if (cleanUserData.createdAt) cleanUserData.createdAt = serverTimestamp();
+            
+            try {
+              await setDoc(doc(db, 'users', targetUid), cleanUserData);
+              userCount++;
+            } catch (e: any) {
+              console.error(`Erro ao importar usuário ${targetUid}:`, e);
+              throw new Error(`Falha no usuário ${cleanUserData.email || targetUid}: ${e.message}`);
             }
           }
         }
+      }
 
       // Import ETPs
       let etpCount = 0;
-      const totalEtps = backupToImport.drafts.length;
-      for (let i = 0; i < totalEtps; i++) {
-        const draft = backupToImport.drafts[i];
-        setImportProgress({ current: i + 1, total: totalEtps, type: 'ETPs' });
-        const { id, ...data } = draft;
-        const cleanData = { ...data };
-        if (cleanData.createdAt) cleanData.createdAt = serverTimestamp();
-        if (cleanData.updatedAt) cleanData.updatedAt = serverTimestamp();
-        if (cleanData.deletedAt) cleanData.deletedAt = serverTimestamp();
-        
-        try {
-          await setDoc(doc(db, 'etps', id), cleanData);
-          etpCount++;
-        } catch (e: any) {
-          console.error(`Erro ao importar ETP ID ${id}:`, e);
-          throw new Error(`Falha no ETP "${cleanData.title || id}": ${e.message}`);
+      if (backupToImport.drafts && Array.isArray(backupToImport.drafts)) {
+        const totalDrafts = backupToImport.drafts.length;
+        for (let i = 0; i < totalDrafts; i++) {
+          const draft = backupToImport.drafts[i];
+          setImportProgress({ current: i + 1, total: totalDrafts, type: 'ETPs' });
+          
+          const id = draft.id;
+          if (id) {
+            const cleanData = { ...draft };
+            if ('id' in cleanData) delete cleanData.id;
+            
+            // Prepare dates
+            if (cleanData.createdAt) cleanData.createdAt = serverTimestamp();
+            if (cleanData.updatedAt) cleanData.updatedAt = serverTimestamp();
+            
+            try {
+              await setDoc(doc(db, 'etps', id), cleanData);
+              etpCount++;
+            } catch (e: any) {
+              console.error(`Erro ao importar ETP ${id}:`, e);
+              throw new Error(`Falha no ETP "${cleanData.title || id}": ${e.message}`);
+            }
+          }
         }
       }
       
-      setImportProgress(null);
-      alert(`Sucesso! ${etpCount} ETPs e ${userCount} usuários restaurados.`);
-      window.location.reload();
+      setApiError(`Importação concluída com sucesso! ${userCount} usuários e ${etpCount} estudos (ETPs) foram importados.`);
+      setTimeout(() => setApiError(null), 5000);
     } catch (err: any) {
-      console.error("Erro na importação:", err);
-      setApiError("Erro ao importar backup: " + (err.message || "Erro desconhecido"));
-      setImportProgress(null);
+      console.error("Erro ao restaurar backup:", err);
+      setApiError("Erro ao restaurar backup: " + (err.message || "Erro desconhecido"));
     } finally {
       setIsSaving(false);
+      setImportProgress(null);
     }
   };
 
   const handleExtractFromDoc = async () => {
-    if (!pastedDocText || pastedDocText.trim().length < 50) {
-      setExtractError("Por favor, forneça ou cole um texto de documento com pelo menos 50 caracteres para que a IA possa realizar uma análise útil.");
-      return;
-    }
-    setExtractError(null);
+    if (!pastedDocText.trim() || pastedDocText.trim().length < 50) return;
+    
     setIsExtractingDoc(true);
+    setExtractError(null);
+    
     try {
+      // Intelligently limit sending size to keep payload reasonable
       const originalLength = pastedDocText.length;
-      
-      // 1. Limpeza e compactação de espaços em branco / quebras de linha redundantes
-      let condensed = pastedDocText.replace(/\r\n/g, '\n');
-      // Reduz espaços e tabulações consecutivas para um único espaço
-      condensed = condensed.replace(/[ \t]{2,}/g, ' ');
-      // Reduz múltiplas linhas vazias seguidas para no máximo duas
-      condensed = condensed.replace(/\n{3,}/g, '\n\n');
-      
-      // 2. Limitação de tamanho do texto bruto para evitar estourar o buffer e limites do Proxy RPC do navegador
-      const MAX_SAFE_CHARS = 32000;
+      let condensed = pastedDocText;
       let isTruncated = false;
-      if (condensed.length > MAX_SAFE_CHARS) {
-        condensed = condensed.substring(0, MAX_SAFE_CHARS);
+      if (originalLength > 70000) {
+        condensed = pastedDocText.substring(0, 70000);
         isTruncated = true;
       }
       
       console.log(`[Document Extraction] Compacted payload: ${originalLength} chars -> ${condensed.length} chars (Truncated: ${isTruncated})`);
 
-      const ai = new GoogleGenAI({ 
-        apiKey: getGeminiApiKey(),
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build'
-          }
+      let customKeyHeader = undefined;
+      try {
+        const settingsKey = systemSettings?.geminiApiKey;
+        if (settingsKey && settingsKey.trim().length > 10) {
+          customKeyHeader = settingsKey.trim();
         }
-      });
-      
-      const prompt = `Você é um assessor de licitações especialista na Lei 14.133/2021 (Nova Lei de Licitações) e na elaboração de Estudos Técnicos Preliminares (ETP).
-Recebemos um termo de referência (TR), edital ou ETP de uma contratação anterior ou similar com o seguinte conteúdo:
----
-${condensed}
----
-${isTruncated ? '\n(Atenção: O documento acima foi parcialmente delimitado para viabilizar a análise técnica no navegador do usuário, mas contém todas as partes principais relevantes)\n' : ''}
+      } catch (e) {}
 
-Sua tarefa é analisar o documento antigo acima e preencher as 8 perguntas essenciais (Diagnóstico Inicial) para iniciar o novo ETP.
-Você deve retornar APENAS um objeto JSON válido, contendo as respostas para os campos do Diagnóstico Inicial e alguns metadados básicos.
-
-Campos a preencher no JSON (use o idioma português brasileiro de forma técnica e formal):
-{
-  "etp_name": "Um título curto e claro para o novo ETP baseado no objeto do documento (ex: 'Aquisição de Licenças de Software Microsoft')",
-  "diag_problema_necessidade": "Resposta técnica para: Qual é o problema ou necessidade que motiva esta contratação e o que se espera alcançar?",
-  "diag_alternativas_solucao": "Resposta técnica para: Quais alternativas de solução foram consideradas (ou praticadas no documento) e qual foi a escolhida?",
-  "diag_objeto_vigencia": "Resposta técnica para: Qual é o objeto exato e seu prazo/vigência estimado?",
-  "diag_exigencias_padroes": "Resposta técnica para: Quais exigências técnicas, padrões de qualidade ou marcas mínimas são apontadas no documento?",
-  "diag_quantidades_valor": "Resposta técnica para: Quais as quantidades estimadas e o valor total estimado (se constar)?",
-  "diag_parcelamento_providencias": "Resposta técnica para: Como se dará o de parcelamento e quais providências administrativas prévias são necessárias?",
-  "diag_correlatas_ambientais": "Resposta técnica para: Há contratações correlatas/interdependentes envolvidas ou requisitos ambientais/sustentabilidade?",
-  "diag_riscos_sucesso": "Resposta técnica para: Quais são as principais ameaças/riscos identificados no documento antigo para o sucesso da contratação?",
-  "unidade_requisitante": "Nome da área ou unidade requisitante que consta no documento (se houver, caso contrário deixe em branco)",
-  "responsavel": "Nome do responsável ou elaborador (se houver, caso contrário deixe em branco)"
-}
-
-REGRAS CRÍTICAS:
-- O JSON deve ser puro, perfeitamente estruturado e válido.
-- Não inclua markdown de bloco (como \`\`\`json) na resposta, de preferência apenas o JSON bruto como texto. Mas se incluir, vamos limpar.
-- Não inclua introduções, comentários explicativos ou textos fora do JSON.
-- Se o documento omitir informação de alguma pergunta, faça uma análise inferencial lógica baseada no objeto da contratação para responder de forma técnica e adequada, evitando deixar campos vazios.`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [{ parts: [{ text: prompt }] }],
-        config: {
-          responseMimeType: "application/json"
-        }
+      const fetchRes = await fetch("/api/ai/extract-doc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: condensed,
+          isTruncated: isTruncated,
+          customApiKey: customKeyHeader
+        })
       });
 
-      const text = response.text;
+      if (!fetchRes.ok) {
+        const errJson = await fetchRes.json().catch(() => ({}));
+        throw new Error(errJson.error || "Falha ao extrair documento no servidor.");
+      }
+
+      const fetchJson = await fetchRes.json();
+      const text = fetchJson.result;
+
       if (!text) {
         throw new Error("A IA não retornou conteúdo.");
       }
@@ -1821,49 +1865,33 @@ REGRAS CRÍTICAS:
     const fieldName = field?.label;
     
     try {
-      const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
-      const diagnosticInfo = `
-      - Problema/Necessidade: ${formData.diag_problema_necessidade}
-      - Alternativas: ${formData.diag_alternativas_solucao}
-      - Objeto/Vigência: ${formData.diag_objeto_vigencia}
-      - Exigências/Padrões: ${formData.diag_exigencias_padroes}
-      - Quantidades/Valor: ${formData.diag_quantidades_valor}
-      - Parcelamento/Providências: ${formData.diag_parcelamento_providencias}
-      - Correlatas/Ambientais: ${formData.diag_correlatas_ambientais}
-      - Riscos: ${formData.diag_riscos_sucesso}
-      `;
-
-      let tableInstruction = '';
-      if (fieldId === 'tabela_estimativa_quantitativos_precos') {
-        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para os quantitativos e precos seguindo este modelo de aspas simples:\n${TABLE_TEMPLATES.quantitativos.replace(/"/g, "'")}`;
-      } else if (fieldId === 'tabela_riscos_interna') {
-        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase INTERNA seguindo este modelo de aspas simples:\n${TABLE_TEMPLATES.riscos('INTERNA').replace(/"/g, "'")}`;
-      } else if (fieldId === 'tabela_riscos_externa') {
-        tableInstruction = `\nREGRAS DE TABELA: Gere uma tabela HTML para riscos fase EXTERNA seguindo este modelo de aspas simples:\n${TABLE_TEMPLATES.riscos('EXTERNA').replace(/"/g, "'")}`;
-      }
-
-      const prompt = `Com base no DIAGNÓSTICO INICIAL abaixo:
-      ${diagnosticInfo}
-      
-      Redija a seção "${fieldName}" deste Estudo Técnico Preliminar conforme a Lei 14.133/21. 
-      Siga as instruções da CMC: ${field?.instruction || ''}${tableInstruction}
-      
-      REGRAS CRÍTICAS: 
-      - NÃO inclua o título "${fieldName}" ou o nome da seção no texto. 
-      - NÃO use markdown (#, *, **). 
-      - NÃO inclua introduções ou comentários. 
-      - Retorne APENAS o texto final (ou HTML da tabela se aplicável).
-      - Se as informações forem insuficientes para um texto técnico completo, você DEVE iniciar a resposta com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ] indicando o que falta.`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [{ parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
+      let customKeyHeader = undefined;
+      try {
+        const settingsKey = systemSettings?.geminiApiKey;
+        if (settingsKey && settingsKey.trim().length > 10) {
+          customKeyHeader = settingsKey.trim();
         }
+      } catch (e) {}
+
+      const fetchRes = await fetch("/api/ai/assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fieldId,
+          fieldName,
+          instruction: field?.instruction || '',
+          formData,
+          customApiKey: customKeyHeader
+        })
       });
 
-      const result = response.text;
+      if (!fetchRes.ok) {
+        const errJson = await fetchRes.json().catch(() => ({}));
+        throw new Error(errJson.error || "Falha ao processar assistente de campo no servidor.");
+      }
+
+      const fetchJson = await fetchRes.json();
+      const result = fetchJson.text;
       console.log(`AI Assist Response for ${fieldId}:`, result);
       
       if (result) {
@@ -1907,178 +1935,41 @@ REGRAS CRÍTICAS:
     setIsGenerating('global');
     setShowGlobalConfirm(false);
     try {
-      const ai = new GoogleGenAI({ apiKey: getGeminiApiKey() });
-      
-      const diagnosticInfo = `
-      - Problema/Necessidade: ${formData.diag_problema_necessidade}
-      - Alternativas: ${formData.diag_alternativas_solucao}
-      - Objeto/Vigência: ${formData.diag_objeto_vigencia}
-      - Exigências/Padrões: ${formData.diag_exigencias_padroes}
-      - Quantidades/Valor: ${formData.diag_quantidades_valor}
-      - Parcelamento/Providências: ${formData.diag_parcelamento_providencias}
-      - Correlatas/Ambientais: ${formData.diag_correlatas_ambientais}
-      - Riscos: ${formData.diag_riscos_sucesso}
-      `;
-
-      const fieldsGroup1 = [
-        "justificativa_necessidade",
-        "levantamento_mercado",
-        "objeto_sucinto",
-        "especificacoes_tecnicas",
-        "descricao_solucao_integral",
-        "requisitos_header",
-        "requisitos_exigencias",
-        "requisitos_qualidade",
-        "requisitos_marca"
-      ];
-
-      const fieldsGroup2 = [
-        "requisitos_continuos",
-        "requisitos_amostra",
-        "requisitos_transicao",
-        "garantia_contratual",
-        "garantia_tecnica",
-        "assistencia_tecnica",
-        "requisitos_vistoria",
-        "requisitos_subcontratacao",
-        "requisitos_execucao",
-        "requisitos_dimensionamento"
-      ];
-
-      const fieldsGroup3 = [
-        "estimativa_quantidades_texto",
-        "estimativa_valor_texto",
-        "tabela_estimativa_quantitativos_precos",
-        "justificativa_parcelamento",
-        "resultados_pretendidos",
-        "providencias_adm",
-        "contratacoes_correlatas",
-        "impactos_ambientais",
-        "alinhamento_planejamento",
-        "posicionamento_conclusivo",
-        "analise_riscos_resumo",
-        "tabela_riscos_interna",
-        "tabela_riscos_externa"
-      ];
-
-      const tableInstructions = `
-      Para os campos de tabela, você DEVE obrigatoriamente gerar HTML de tabela bonito, profissional, moderno e responsivo seguindo estes modelos exatos.
-      ATENÇÃO EXTREMA: Em todo o código HTML das tabelas geradas, você DEVE usar OBRIGATORIAMENTE apenas aspas simples (') para delimitar atributos HTML (exemplo: style='...', colspan='...', border='...'). NÃO use aspas duplas (") sob nenhuma circunstância dentro das strings HTML, caso contrário o JSON será corrompido!
-      
-      Modelos de tabelas (com aspas simples):
-      - tabela_estimativa_quantitativos_precos: ${TABLE_TEMPLATES.quantitativos.replace(/"/g, "'")}
-      - tabela_riscos_interna: ${TABLE_TEMPLATES.riscos('INTERNA').replace(/"/g, "'")}
-      - tabela_riscos_externa: ${TABLE_TEMPLATES.riscos('EXTERNA').replace(/"/g, "'")}
-      `;
-
-      const prompt1 = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba.
-      Sua missão é gerar o conteúdo completo do Estudo Técnico Preliminar (ETP) com base nas respostas do DIAGNÓSTICO INICIAL fornecidas.
-      
-      DIAGNÓSTICO INICIAL:
-      ${diagnosticInfo}
-      
-      Você DEVE gerar conteúdo técnico substancial, formal, completo, detalhado e coerente para os seguintes campos técnicos de texto:
-      ${fieldsGroup1.map(f => `- ${f}`).join('\n')}
-      
-      INSTRUÇÕES DE COESÃO E QUALIDADE:
-      - Garanta que os textos se complementem perfeitamente.
-      - Mantenha os textos objetivos, técnicos, formais e focados nas necessidades do município de Curitiba.
-      - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo, inicie o texto de rascunho desse campo com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
-      
-      Retorne obrigatoriamente um JSON puro contendo exatamente as chaves do grupo (com textos gerados):
-      ${JSON.stringify(fieldsGroup1)}
-      
-      REGRAS CRÍTICAS: NÃO use markdown (#, *, **). NÃO inclua introduções, comentários ou explicações fora do JSON.`;
-
-      const prompt2 = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba.
-      Sua missão é gerar o conteúdo completo do Estudo Técnico Preliminar (ETP) com base nas respostas do DIAGNÓSTICO INICIAL fornecidas.
-      
-      DIAGNÓSTICO INICIAL:
-      ${diagnosticInfo}
-      
-      Você DEVE gerar conteúdo técnico substancial, formal, completo, detalhado e coerente para os seguintes campos técnicos de texto:
-      ${fieldsGroup2.map(f => `- ${f}`).join('\n')}
-      
-      INSTRUÇÕES DE COESÃO E QUALIDADE:
-      - Garanta que os textos se complementem perfeitamente.
-      - Mantenha os textos objetivos, técnicos, formais e focados.
-      - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo, inicie o texto de rascunho desse campo com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
-      
-      Retorne obrigatoriamente um JSON puro contendo exatamente as chaves do grupo (com textos gerados):
-      ${JSON.stringify(fieldsGroup2)}
-      
-      REGRAS CRÍTICAS: NÃO use markdown (#, *, **). NÃO inclua introduções, comentários ou explicações fora do JSON.`;
-
-      const prompt3 = `Aja como um revisor jurídico sênior da Câmara Municipal de Curitiba.
-      Sua missão é gerar o conteúdo completo do Estudo Técnico Preliminar (ETP) com base nas respostas do DIAGNÓSTICO INICIAL fornecidas.
-      
-      DIAGNÓSTICO INICIAL:
-      ${diagnosticInfo}
-      
-      Você DEVE gerar conteúdo técnico substancial, formal, completo e detalhado para as seguintes chaves de texto e tabelas:
-      ${fieldsGroup3.map(f => `- ${f}`).join('\n')}
-      
-      ${tableInstructions}
-      
-      INSTRUÇÕES DE COESÃO E QUALIDADE:
-      - Mantenha os textos objetivos, técnicos, formais e focados.
-      - O "Planejamento Estratégico 2022-2031" deve ser citado APENAS na seção de Alinhamento ao Planejamento.
-      - REGRA CRÍTICA: Se os dados do Diagnóstico Inicial forem insuficientes para qualquer campo de texto, inicie o texto dele com "NECESSITA COMPLEMENTAÇÃO" seguido de uma linha em branco e o rascunho com colchetes [ ].
-      
-      Retorne obrigatoriamente um JSON puro contendo exatamente as chaves do grupo (com textos ou HTML das tabelas gerados):
-      ${JSON.stringify(fieldsGroup3)}
-      
-      REGRAS CRÍTICAS DE SINTAXE: 
-      1. NÃO use markdown (#, *, **) para formatar o texto dos campos. 
-      2. NÃO inclua introduções, comentários ou explicações fora do JSON.
-      3. Use APENAS aspas simples (') para todos os atributos das marcações HTML das tabelas (como style='...', colspan='...', border='...'). NÃO use aspas duplas (") dentro das tabelas, sob pena de gerar uma resposta JSON inválida e corrompida.`;
-
-      const [response1, response2, response3] = await Promise.all([
-        ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: [{ parts: [{ text: prompt1 }] }],
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-            responseMimeType: "application/json"
-          }
-        }),
-        ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: [{ parts: [{ text: prompt2 }] }],
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-            responseMimeType: "application/json"
-          }
-        }),
-        ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: [{ parts: [{ text: prompt3 }] }],
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-            responseMimeType: "application/json"
-          }
-        })
-      ]);
-
-      const parseJson = (text: string | undefined, groupName: string) => {
-        if (!text) throw new Error(`A IA não retornou resposta para o ${groupName}.`);
-        try {
-          const jsonCleaned = text.replace(/```json\n?|```/g, '').trim();
-          return JSON.parse(jsonCleaned);
-        } catch (e: any) {
-          console.error(`Erro ao analisar JSON para ${groupName}:`, text, e);
-          throw new Error(`Erro ao analisar resposta da IA para o ${groupName}.`);
+      let customKeyHeader = undefined;
+      try {
+        const settingsKey = systemSettings?.geminiApiKey;
+        if (settingsKey && settingsKey.trim().length > 10) {
+          customKeyHeader = settingsKey.trim();
         }
-      };
+      } catch (e) {}
 
-      const data1 = parseJson(response1.text, "Grupo 1 (Demanda e Solução)");
-      const data2 = parseJson(response2.text, "Grupo 2 (Requisitos e Execução)");
-      const data3 = parseJson(response3.text, "Grupo 3 (Estimativas e Riscos)");
+      const fetchRes = await fetch("/api/ai/generate-global", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          diag_problema_necessidade: formData.diag_problema_necessidade || "",
+          diag_alternativas_solucao: formData.diag_alternativas_solucao || "",
+          diag_objeto_vigencia: formData.diag_objeto_vigencia || "",
+          diag_exigencias_padroes: formData.diag_exigencias_padroes || "",
+          diag_quantidades_valor: formData.diag_quantidades_valor || "",
+          diag_parcelamento_providencias: formData.diag_parcelamento_providencias || "",
+          diag_correlatas_ambientais: formData.diag_correlatas_ambientais || "",
+          diag_riscos_sucesso: formData.diag_riscos_sucesso || "",
+          customApiKey: customKeyHeader
+        })
+      });
 
-      const combinedData = { ...data1, ...data2, ...data3 };
+      if (!fetchRes.ok) {
+        const errJson = await fetchRes.json().catch(() => ({}));
+        throw new Error(errJson.error || "Falha na geração global no servidor.");
+      }
+
+      const fetchJson = await fetchRes.json();
+      const combinedData = fetchJson.combinedData;
+
       console.log("Combined AI Generated Data:", combinedData);
 
-      if (Object.keys(combinedData).length === 0) {
+      if (!combinedData || Object.keys(combinedData).length === 0) {
         throw new Error("A IA retornou um estudo vazio. Tente fornecer mais detalhes no Diagnóstico Inicial.");
       }
 
