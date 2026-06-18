@@ -8,8 +8,7 @@ export default defineConfig(({command, mode}) => {
   
   // Dev mode and standard preview must use '/' to ensure assets resolve properly.
   // GitHub Pages build on GitHub Actions will use the repository suffix.
-  const isGitHubActions = process.env.GITHUB_ACTIONS === 'true' || !!process.env.GITHUB_WORKFLOW;
-  const base = command === 'serve' ? '/' : (isGitHubActions ? '/ETP_Digital_v2/' : '/');
+  const base = command === 'serve' ? '/' : './';
 
   return {
     plugins: [react(), tailwindcss()],
