@@ -3263,7 +3263,7 @@ export default function App() {
                           <Icon name="FileText" size={16} />
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-bold text-slate-900 text-[11px] sm:text-sm truncate">{draft.title}</h4>
+                          <h4 className="font-bold text-slate-900 text-[11px] sm:text-sm break-words whitespace-normal">{draft.title}</h4>
                           <p className="text-[9px] sm:text-[10px] text-slate-400 font-medium italic truncate">ID: {draft.id}</p>
                         </div>
                       </div>
