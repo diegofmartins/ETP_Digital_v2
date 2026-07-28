@@ -3365,7 +3365,7 @@ export default function App() {
                   setPastedDocText('');
                   setShowImportDocModal(true);
                 }}
-                className="bg-amber-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-amber-700 transition-all shadow-lg shadow-amber-200 flex-1 sm:flex-none justify-center animate-pulse-slow"
+                className="bg-green-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-green-700 transition-all shadow-lg shadow-green-200 flex-1 sm:flex-none justify-center animate-pulse-slow"
               >
                 <Icon name="Sparkles" size={18} /> <span className="hidden sm:inline">Novo ETP via Doc Anterior</span><span className="sm:hidden">Baseado em TR/ETP</span>
               </button>

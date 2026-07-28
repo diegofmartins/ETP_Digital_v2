@@ -10,14 +10,17 @@ export const auth = getAuth(app);
 // Initialize Firestore only if not already initialized
 let firestoreInstance: Firestore;
 try {
-  // Try to initialize with specific settings to bypass connection issues (especially on restrictive networks/GitHub Pages)
-  firestoreInstance = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-    experimentalAutoDetectLongPolling: false, // Force it, don't just detect
-  }, firebaseConfig.firestoreDatabaseId);
-} catch (e: any) {
-  // If already initialized (e.g. during HMR or multiple imports), just get the existing instance
+  // Use standard getFirestore to allow optimal WebSocket/gRPC streams and prevent proxy buffering connection timeouts
   firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+} catch (e: any) {
+  try {
+    // If we need to initialize with autodetect settings as a fallback
+    firestoreInstance = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true,
+    }, firebaseConfig.firestoreDatabaseId);
+  } catch (initErr: any) {
+    firestoreInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  }
 }
 
 export const db = firestoreInstance;
