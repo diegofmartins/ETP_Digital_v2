@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { ETPData, ETPField, ETPStructureItem, ETPExample } from "./types";
 import { notifyNewUserRegistration, notifyUserApproved, notifyNewETPCreated, sendGoogleChatNotification } from "./services/notificationService";
+import { requestAiAssist, requestAiGenerateGlobal, requestAiExtractDoc, getClientGeminiApiKey } from "./services/aiService";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table as DocxTable, TableRow as DocxTableRow, TableCell as DocxTableCell, WidthType, ImageRun } from "docx";
 import { saveAs } from "file-saver";
 import { HtmlTableEditor } from "./components/HtmlTableEditor";
@@ -709,16 +710,20 @@ export default function App() {
     return () => window.removeEventListener('firestore-quota-exceeded', handleQuotaError);
   }, []);
 
+  // Initialize local Gemini API key from storage on mount (helpful for static GitHub Pages)
+  useEffect(() => {
+    try {
+      const localKey = localStorage.getItem('gemini_api_key');
+      if (localKey && localKey.trim().length > 10) {
+        setSystemSettings(prev => ({ ...prev, geminiApiKey: localKey.trim() }));
+      }
+    } catch (e) {}
+  }, []);
+
   const getGeminiApiKey = (): string => {
-    const settingsKey = systemSettings?.geminiApiKey;
-    if (settingsKey && settingsKey.trim().length > 10) {
-      return settingsKey.trim();
-    }
-    
-    // Fallback block standard environment vars
-    const viteKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (viteKey && viteKey.trim().length > 10) {
-      return viteKey.trim();
+    const resolved = getClientGeminiApiKey(systemSettings?.geminiApiKey);
+    if (resolved) {
+      return resolved;
     }
 
     let processKey = undefined;
@@ -732,7 +737,7 @@ export default function App() {
     }
 
     throw new Error(
-      "Chave de API do Gemini não configurada! Para utilizar as funções de IA fora do ambiente de desenvolvimento (como na versão live do GitHub), um usuário Master deve entrar no painel Administrador > Configurações e salvar a Chave de API do Gemini da organização."
+      "Chave de API do Gemini não configurada! Para utilizar as funções de IA na versão estática (GitHub Pages), um usuário Master deve entrar no Painel Master > Configurações e salvar a Chave de API do Gemini da organização (ou preencher VITE_GEMINI_API_KEY)."
     );
   };
 
@@ -1154,7 +1159,13 @@ export default function App() {
     if (user && isAuthReady) {
       const unsubscribe = onSnapshot(doc(db, 'config', 'system'), (docSnap) => {
         if (docSnap.exists()) {
-          setSystemSettings(docSnap.data());
+          const data = docSnap.data();
+          setSystemSettings(data);
+          if (data?.geminiApiKey && typeof data.geminiApiKey === 'string' && data.geminiApiKey.trim().length > 10) {
+            try {
+              localStorage.setItem('gemini_api_key', data.geminiApiKey.trim());
+            } catch (e) {}
+          }
         }
       });
       return unsubscribe;
@@ -1163,10 +1174,23 @@ export default function App() {
 
   const updateSystemSettings = async (newSettings: any) => {
     try {
+      if (newSettings?.geminiApiKey && typeof newSettings.geminiApiKey === 'string') {
+        try {
+          localStorage.setItem('gemini_api_key', newSettings.geminiApiKey.trim());
+        } catch (e) {}
+      }
       await setDoc(doc(db, 'config', 'system'), newSettings, { merge: true });
       setApiError("Configurações atualizadas com sucesso!");
       setTimeout(() => setApiError(null), 3000);
     } catch (err: any) {
+      if (newSettings?.geminiApiKey && typeof newSettings.geminiApiKey === 'string') {
+        try {
+          localStorage.setItem('gemini_api_key', newSettings.geminiApiKey.trim());
+          setApiError("Chave de API salva localmente neste navegador com sucesso!");
+          setTimeout(() => setApiError(null), 3000);
+          return;
+        } catch (e) {}
+      }
       handleFirestoreError(err, OperationType.WRITE, 'config/system');
     }
   };
@@ -1812,23 +1836,11 @@ export default function App() {
         }
       } catch (e) {}
 
-      const fetchRes = await fetch("/api/ai/extract-doc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: condensed,
-          isTruncated: isTruncated,
-          customApiKey: customKeyHeader
-        })
+      const text = await requestAiExtractDoc({
+        text: condensed,
+        isTruncated: isTruncated,
+        customApiKey: customKeyHeader
       });
-
-      if (!fetchRes.ok) {
-        const errJson = await fetchRes.json().catch(() => ({}));
-        throw new Error(errJson.error || "Falha ao extrair documento no servidor.");
-      }
-
-      const fetchJson = await fetchRes.json();
-      const text = fetchJson.result;
 
       if (!text) {
         throw new Error("A IA não retornou conteúdo.");
@@ -1928,25 +1940,14 @@ export default function App() {
         }
       } catch (e) {}
 
-      const fetchRes = await fetch("/api/ai/assist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fieldId,
-          fieldName,
-          instruction: field?.instruction || '',
-          formData,
-          customApiKey: customKeyHeader
-        })
+      const result = await requestAiAssist({
+        fieldId,
+        fieldName,
+        instruction: field?.instruction || '',
+        formData,
+        customApiKey: customKeyHeader
       });
 
-      if (!fetchRes.ok) {
-        const errJson = await fetchRes.json().catch(() => ({}));
-        throw new Error(errJson.error || "Falha ao processar assistente de campo no servidor.");
-      }
-
-      const fetchJson = await fetchRes.json();
-      const result = fetchJson.text;
       console.log(`AI Assist Response for ${fieldId}:`, result);
       
       if (result) {
@@ -1971,19 +1972,32 @@ export default function App() {
     }
   };
 
-  const isMandatoryFilled = () => {
-    if (!formData) return false;
-    const mandatoryFields: ETPField[] = [
-      'diag_problema_necessidade', 'diag_alternativas_solucao', 'diag_objeto_vigencia', 'diag_exigencias_padroes',
-      'diag_quantidades_valor', 'diag_parcelamento_providencias', 'diag_correlatas_ambientais', 'diag_riscos_sucesso'
+  const getMissingMandatoryFields = () => {
+    if (!formData) return [];
+    const mandatoryFieldsList: { id: ETPField; label: string }[] = [
+      { id: 'diag_problema_necessidade', label: '1. Problema ou Necessidade' },
+      { id: 'diag_alternativas_solucao', label: '2. Alternativas de Solução' },
+      { id: 'diag_objeto_vigencia', label: '3. Objeto e Vigência' },
+      { id: 'diag_exigencias_padroes', label: '4. Exigências e Padrões' },
+      { id: 'diag_quantidades_valor', label: '5. Quantidades e Valor' },
+      { id: 'diag_parcelamento_providencias', label: '6. Parcelamento e Providências' },
+      { id: 'diag_correlatas_ambientais', label: '7. Correlatas e Ambientais' },
+      { id: 'diag_riscos_sucesso', label: '8. Riscos ao Sucesso' }
     ];
-    return mandatoryFields.every(field => (String(formData[field] || '').length) > 10);
+    return mandatoryFieldsList.filter(item => (String(formData[item.id] || '').trim().length) <= 10);
+  };
+
+  const isMandatoryFilled = () => {
+    return getMissingMandatoryFields().length === 0;
   };
 
   const handleGlobalGenerate = async (fillEmpty: boolean = true) => {
     if (!formData || isAdminViewing) return;
-    if (!isMandatoryFilled()) {
-      setApiError("Por favor, preencha detalhadamente todos os campos do Diagnóstico Inicial e Dados Essenciais antes de solicitar o polimento da IA.");
+    const missing = getMissingMandatoryFields();
+    if (missing.length > 0) {
+      setApiError(
+        `Para gerar o estudo técnico completo com IA, preencha com mais de 10 caracteres os seguintes campos essenciais do Diagnóstico: ${missing.map(m => m.label).join(', ')}.`
+      );
       return;
     }
     setApiError(null);
@@ -1998,29 +2012,10 @@ export default function App() {
         }
       } catch (e) {}
 
-      const fetchRes = await fetch("/api/ai/generate-global", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          diag_problema_necessidade: formData.diag_problema_necessidade || "",
-          diag_alternativas_solucao: formData.diag_alternativas_solucao || "",
-          diag_objeto_vigencia: formData.diag_objeto_vigencia || "",
-          diag_exigencias_padroes: formData.diag_exigencias_padroes || "",
-          diag_quantidades_valor: formData.diag_quantidades_valor || "",
-          diag_parcelamento_providencias: formData.diag_parcelamento_providencias || "",
-          diag_correlatas_ambientais: formData.diag_correlatas_ambientais || "",
-          diag_riscos_sucesso: formData.diag_riscos_sucesso || "",
-          customApiKey: customKeyHeader
-        })
+      const combinedData = await requestAiGenerateGlobal({
+        formData,
+        customApiKey: customKeyHeader
       });
-
-      if (!fetchRes.ok) {
-        const errJson = await fetchRes.json().catch(() => ({}));
-        throw new Error(errJson.error || "Falha na geração global no servidor.");
-      }
-
-      const fetchJson = await fetchRes.json();
-      const combinedData = fetchJson.combinedData;
 
       console.log("Combined AI Generated Data:", combinedData);
 
@@ -4015,6 +4010,38 @@ export default function App() {
     <div className="min-h-screen bg-slate-50">
       <Modals />
       
+      {apiError && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 no-print">
+          <div className="p-4 bg-red-50 border-2 border-red-200 rounded-2xl flex items-start sm:items-center justify-between gap-3 text-red-700 shadow-sm">
+            <div className="flex items-start sm:items-center gap-3">
+              <Icon name="AlertTriangle" size={20} className="shrink-0 mt-0.5 sm:mt-0 text-red-600" />
+              <p className="text-xs sm:text-sm font-bold leading-snug">{apiError}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {userRole === 'master' && (apiError.includes("Chave de API") || apiError.includes("Configurações")) && (
+                <button
+                  onClick={() => {
+                    setView('admin');
+                    setAdminTab('settings');
+                    setApiError(null);
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                >
+                  Configurar Chave
+                </button>
+              )}
+              <button 
+                onClick={() => setApiError(null)} 
+                className="p-1 hover:bg-red-200 rounded-lg text-red-500"
+                title="Fechar"
+              >
+                <Icon name="X" size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {view === 'dashboard' ? (
         <>
           <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -4311,13 +4338,30 @@ export default function App() {
 
                       <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center">
                         {!isMandatoryFilled() ? (
-                          <div className="text-center space-y-4">
+                          <div className="text-center space-y-4 max-w-lg mx-auto">
                             <div className="flex justify-center gap-2">
-                              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                                <div key={`dot-${i}`} className={`w-3 h-3 rounded-full transition-all ${String(formData[`diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData] || '').length > 10 ? 'bg-green-500 scale-110' : 'bg-slate-200'}`} />
-                              ))}
+                              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => {
+                                const fieldKey = `diag_${['problema_necessidade', 'alternativas_solucao', 'objeto_vigencia', 'exigencias_padroes', 'quantidades_valor', 'parcelamento_providencias', 'correlatas_ambientais', 'riscos_sucesso'][i-1]}` as keyof ETPData;
+                                const isFilled = (String(formData[fieldKey] || '')).trim().length > 10;
+                                return (
+                                  <div 
+                                    key={`dot-${i}`} 
+                                    title={`Pergunta ${i}: ${isFilled ? 'Preenchida' : 'Pendente (> 10 caracteres)'}`}
+                                    className={`w-3 h-3 rounded-full transition-all ${isFilled ? 'bg-green-500 scale-110' : 'bg-slate-300'}`} 
+                                  />
+                                );
+                              })}
                             </div>
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Complete o diagnóstico para prosseguir</p>
+                            <p className="text-slate-500 text-xs font-bold">
+                              {8 - getMissingMandatoryFields().length} de 8 perguntas do Diagnóstico preenchidas.
+                            </p>
+                            <button
+                              onClick={() => handleGlobalGenerate()}
+                              className="px-6 py-2.5 rounded-xl font-bold text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-2 mx-auto"
+                            >
+                              <Icon name="Info" size={14} className="text-amber-500" />
+                              Ver campos pendentes para liberar a IA
+                            </button>
                           </div>
                         ) : (
                           <motion.button 
@@ -4328,9 +4372,13 @@ export default function App() {
                             className={`px-10 py-5 rounded-[32px] font-black uppercase tracking-widest text-sm transition-all flex items-center gap-4 group ${!!isGenerating || isReadOnly ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-2xl shadow-indigo-200'}`}
                           >
                             <div className="bg-white/20 p-2 rounded-xl group-hover:rotate-12 transition-transform">
-                              <Icon name="Sparkles" size={24} />
+                              {isGenerating === 'global' ? (
+                                <Loader2 size={24} className="animate-spin" />
+                              ) : (
+                                <Icon name="Sparkles" size={24} />
+                              )}
                             </div>
-                            Gerar Estudo Técnico Completo
+                            {isGenerating === 'global' ? 'Gerando com IA...' : 'Gerar Estudo Técnico Completo'}
                           </motion.button>
                         )}
                       </div>

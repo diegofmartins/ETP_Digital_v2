@@ -98,13 +98,23 @@ const getAiClient = (customKey?: string) => {
 // Generic delay utility for automatic retries
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper function to fetch Gemini content with automatic retries for resilience
-const generateWithRetry = async (ai: GoogleGenAI, prompt: string, mimeType?: "application/json", retries = 2) => {
-  let attempt = 0;
-  while (attempt <= retries) {
+// Candidate models in order of preference for high resilience and quota distribution
+const CANDIDATE_MODELS = [
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+  "gemini-3.8-flash"
+];
+
+// Helper function to fetch Gemini content with automatic retries and model fallback for resilience
+const generateWithRetry = async (ai: GoogleGenAI, prompt: string, mimeType?: "application/json", retries = 3) => {
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < retries; attempt++) {
+    // Select model, rotating to next candidate if a previous attempt experienced high demand or quota limits
+    const model = CANDIDATE_MODELS[Math.min(attempt, CANDIDATE_MODELS.length - 1)];
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model,
         contents: [{ parts: [{ text: prompt }] }],
         config: {
           systemInstruction: SYSTEM_PROMPT,
@@ -116,15 +126,23 @@ const generateWithRetry = async (ai: GoogleGenAI, prompt: string, mimeType?: "ap
       }
       throw new Error("Resposta vazia retornada pela IA.");
     } catch (err: any) {
-      attempt++;
-      console.warn(`[Gemini API] Tentativa ${attempt} falhou: ${err?.message || err}. Tentando novamente...`);
-      if (attempt > retries) {
-        throw err;
+      lastError = err;
+      const isQuota = err?.status === 429 || err?.message?.includes("429") || err?.message?.includes("quota") || err?.message?.includes("RESOURCE_EXHAUSTED");
+      const isDemand = err?.status === 503 || err?.message?.includes("503") || err?.message?.includes("high demand") || err?.status === "UNAVAILABLE";
+
+      console.warn(
+        `[Gemini API] Modelo ${model} retornou ${isQuota ? "cota excedida (429)" : isDemand ? "alta demanda (503)" : "erro"}. ` +
+        (attempt + 1 < retries ? `Tentando próximo modelo candidato (${attempt + 2}/${retries})...` : "Tentativas esgotadas.")
+      );
+
+      if (attempt + 1 < retries) {
+        // If quota exceeded on this specific model, switch immediately without waiting 20s
+        const waitTime = isQuota ? 300 : (1000 * (attempt + 1) + Math.floor(Math.random() * 400));
+        await delay(waitTime);
       }
-      await delay(1000 * attempt); // Backoff linear simples
     }
   }
-  throw new Error("Falha ao gerar conteúdo após múltiplas tentativas.");
+  throw lastError || new Error("Falha ao gerar conteúdo após múltiplas tentativas.");
 };
 
 // API Endpoint checks
